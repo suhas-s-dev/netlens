@@ -15,6 +15,19 @@ npm run build      # type-check + production bundle into dist/
 npm run deploy     # build + wrangler deploy (needs `wrangler login` first)
 ```
 
+## Learning features
+
+- **Narration:** devices explain each decision in speech bubbles, in their own voice ("I've never seen H3's MAC, so I'm flooding out ports 2, 3"). The `?` chips open the matching glossary entry.
+- **Guided lessons:** one per preset (top bar **▶ Lesson**). The sim plays until the exact engine event a step is about, pauses, flies to the device, explains it, and sometimes asks a quick multiple-choice question.
+- **Concept cards** in every device, link and packet panel, plus a **What it just did** feed per device with the *why* behind each action.
+- **Packet hover cards** say what a moving packet is and why it exists. The inspector explains every layer and header field.
+- **Glossary** of 28 networking concepts with analogies and cross-links. The event log has a **plain English** mode.
+- All explanations come from `src/learn/`, which rephrases real engine events. Tests check that every event in every preset has a clean explanation and that every lesson trigger fires in order.
+
+## Visual style
+
+Pixel-art 3D: three.js's `RenderPixelatedPass` (no extra dependency) renders the scene at 1/3 resolution with edge highlights. Voxel devices have LEDs and screens that light up with real traffic. Each LAN (broadcast domain) sits on its own floating tiled island, and drops and replies show as voxel particle bursts. Turn off **Pixel** in the top bar for smooth rendering.
+
 ## Using it
 
 - **Presets** (top bar): *Single LAN*, *Two LANs + router*, *Three-router chain*. Each preset has a short scripted scenario that starts when you press Play.
@@ -30,6 +43,7 @@ npm run deploy     # build + wrangler deploy (needs `wrangler login` first)
 
 ```
 src/
+  learn/             concepts (glossary), explain (event → learner text), lessons, field notes
   engine/            pure TypeScript simulator; no React, three.js or DOM
     core/            EventQueue (time, seq heap), Rng (mulberry32), Engine, time units
     model/           topology JSON types, Frame

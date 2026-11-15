@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import type { NodeJson, NodeType, TopologyJson } from '../engine';
 
 /** Visual footprint radius by device type (where link tubes attach). */
-export const DEVICE_RADIUS: Record<NodeType, number> = { host: 0.9, switch: 1.3, router: 1.1 };
+export const DEVICE_RADIUS: Record<NodeType, number> = { host: 0.95, switch: 1.35, router: 1.1 };
 export const LINK_HEIGHT = 0.45;
 
 export function nodePos(n: Pick<NodeJson, 'position'>): THREE.Vector3 {

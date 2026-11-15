@@ -13,7 +13,7 @@ import { PACKET_COLORS } from './colors';
 import { linkGeometry } from './layout';
 
 const MAX = 4096;
-const MIN_LEN = 0.38;
+const MIN_LEN = 0.42;
 const X = new THREE.Vector3(1, 0, 0);
 const COLORS = Object.fromEntries(Object.entries(PACKET_COLORS).map(([k, v]) => [k, new THREE.Color(v)])) as Record<PacketClass, THREE.Color>;
 const WHITE = new THREE.Color('#ffffff');
@@ -26,8 +26,8 @@ export function Packets() {
   const ids = useRef<string[]>([]);
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3(), d: new THREE.Vector3(), c: new THREE.Color() }), []);
 
-  const coreGeo = useMemo(() => new THREE.CapsuleGeometry(0.13, 1, 3, 8).rotateZ(Math.PI / 2), []);
-  const haloGeo = useMemo(() => new THREE.SphereGeometry(0.5, 10, 8), []);
+  const coreGeo = useMemo(() => new THREE.BoxGeometry(1, 0.32, 0.32), []);
+  const haloGeo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
 
   // Allocate per-instance colour buffers up front so the shader is compiled with them.
   useLayoutEffect(() => {
@@ -68,10 +68,10 @@ export function Packets() {
       tmp.q.setFromUnitVectors(X, tmp.d);
       const isSel = tx.packetId === selected;
       const k = isSel ? 1.7 : 1;
-      tmp.s.set(len / 1.26, k, k);
+      tmp.s.set(len, k, k);
       tmp.m.compose(tmp.p, tmp.q, tmp.s);
       c.setMatrixAt(i, tmp.m);
-      tmp.s.set(Math.max(0.9, len * 0.9), 0.75 * k, 0.75 * k);
+      tmp.s.set(len + 0.25, 0.6 * k, 0.6 * k);
       tmp.m.compose(tmp.p, tmp.q, tmp.s);
       h.setMatrixAt(i, tmp.m);
       const col = COLORS[tx.cls];
@@ -120,7 +120,7 @@ export function Packets() {
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>
       <instancedMesh ref={halo} args={[haloGeo, undefined, MAX]} frustumCulled={false} raycast={() => null}>
-        <meshBasicMaterial toneMapped={false} transparent opacity={0.22} blending={THREE.AdditiveBlending} depthWrite={false} />
+        <meshBasicMaterial toneMapped={false} transparent opacity={0.28} blending={THREE.AdditiveBlending} depthWrite={false} />
       </instancedMesh>
     </group>
   );

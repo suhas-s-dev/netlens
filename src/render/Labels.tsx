@@ -7,6 +7,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeJson } from '../engine';
 import { useSim } from '../state/sim';
+import { computeIslands, type Island } from './islands';
 import { freePortPositions, linkGeometry, nodePos, portAnchors } from './layout';
 
 const els = new Map<string, HTMLElement>();
@@ -18,6 +19,7 @@ const v = new THREE.Vector3();
 export function LabelProjector() {
   const { camera, size } = useThree();
   useFrame(() => {
+    const bubbles: { el: HTMLElement; x: number; y: number; w: number; h: number }[] = [];
     for (const [key, el] of els) {
       const a = anchors.get(key);
       if (!a) continue;
@@ -29,7 +31,31 @@ export function LabelProjector() {
       const x = (v.x * 0.5 + 0.5) * size.width;
       const y = (-v.y * 0.5 + 0.5) * size.height;
       el.style.visibility = '';
+      if (key.startsWith('bubble:') && el.firstElementChild) {
+        bubbles.push({ el, x, y, w: el.offsetWidth, h: el.offsetHeight });
+        continue;
+      }
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+    }
+    // Speech bubbles: stack upwards instead of overlapping (lowest anchor placed first).
+    bubbles.sort((a, b) => b.y - a.y);
+    const placed: { l: number; r: number; t: number; b: number }[] = [];
+    for (const bb of bubbles) {
+      const l = bb.x - bb.w / 2;
+      const r = bb.x + bb.w / 2;
+      let bottom = bb.y;
+      for (let pass = 0; pass < 4; pass++) {
+        let moved = false;
+        for (const p of placed) {
+          if (r > p.l + 4 && l < p.r - 4 && bottom > p.t && bottom - bb.h < p.b) {
+            bottom = p.t - 4;
+            moved = true;
+          }
+        }
+        if (!moved) break;
+      }
+      placed.push({ l, r, t: bottom - bb.h, b: bottom });
+      bb.el.style.transform = `translate(${bb.x.toFixed(1)}px, ${bottom.toFixed(1)}px) translate(-50%, -100%)`;
     }
   });
   return null;
@@ -56,7 +82,7 @@ function ipsOf(n: NodeJson): string[] {
 function DeviceLabel({ node }: { node: NodeJson }) {
   const selected = useSim((s) => s.selection?.kind === 'node' && s.selection.id === node.id);
   const lod = useSim((s) => s.lod);
-  const pos = useMemo(() => nodePos(node).setY(node.type === 'host' ? 1.6 : 1.0), [node]);
+  const pos = useMemo(() => nodePos(node).setY(node.type === 'host' ? 1.75 : node.type === 'router' ? 2.1 : 1.15), [node]);
   const ref = useLabel(`node:${node.id}`, pos);
   return (
     <div ref={ref} className={`device-label ${node.type} ${selected ? 'selected' : ''}`} style={{ visibility: 'hidden' }}>
@@ -76,12 +102,21 @@ const TONE_ICON: Record<string, string> = { info: '›', good: '✓', warn: '?',
 /** The device "talking": what it just did and why, in its own voice. */
 function DeviceBubble({ node }: { node: NodeJson }) {
   const bubble = useSim((s) => s.bubbles[node.id]);
+  // Only the three most recent speakers (and the selected device) talk at once.
+  const visible = useSim((s) => {
+    if (s.selection?.kind === 'node' && s.selection.id === node.id) return true;
+    const mine = s.bubbles[node.id];
+    if (!mine) return false;
+    let newer = 0;
+    for (const b of Object.values(s.bubbles)) if (b.at > mine.at || (b.at === mine.at && b.n > mine.n)) newer++;
+    return newer < 3;
+  });
   const playing = useSim((s) => s.playing);
   const narration = useSim((s) => s.narration);
   const set = useSim((s) => s.set);
-  const pos = useMemo(() => nodePos(node).setY(node.type === 'host' ? 2.7 : 2.1), [node]);
+  const pos = useMemo(() => nodePos(node).setY(node.type === 'host' ? 2.75 : node.type === 'router' ? 3.0 : 2.15), [node]);
   const ref = useLabel(`bubble:${node.id}`, pos);
-  const show = narration && !!bubble;
+  const show = narration && !!bubble && visible;
   return (
     <div ref={ref} className="bubble-anchor" style={{ visibility: 'hidden' }}>
       {show && (
@@ -102,6 +137,16 @@ function DeviceBubble({ node }: { node: NodeJson }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function IslandLabel({ island }: { island: Island }) {
+  const pos = useMemo(() => new THREE.Vector3(island.cx - island.w / 2 + 0.2, 0.05, island.cz + island.d / 2), [island]);
+  const ref = useLabel(`island:${island.id}`, pos);
+  return (
+    <div ref={ref} className="island-label-anchor" style={{ visibility: 'hidden' }}>
+      <span className="island-label">{island.label}</span>
     </div>
   );
 }
@@ -130,8 +175,12 @@ export function LabelsLayer() {
       return { id: key, label: n.type === 'switch' ? `p${iface}` : iface, pos: p.clone().setY(p.y + 0.45) };
     });
   }, [topology, mode]);
+  const islands = useMemo(() => computeIslands(topology).filter((i) => i.kind === 'lan'), [topology]);
   return (
     <div className="labels" aria-hidden>
+      {islands.map((i) => (
+        <IslandLabel key={i.id} island={i} />
+      ))}
       {topology.nodes.map((n) => (
         <DeviceLabel key={n.id} node={n} />
       ))}

@@ -1,4 +1,3 @@
-import { Grid } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import { sim, useSim } from '../state/sim';
@@ -8,6 +7,7 @@ import { DropBursts } from './DropBursts';
 import { LabelProjector } from './Labels';
 import { Links } from './Links';
 import { Packets } from './Packets';
+import { Dust, Islands, Pixelation, Sky } from './World';
 
 /** Drives the simulation clock from the render loop. */
 function SimTicker() {
@@ -33,34 +33,37 @@ export interface SceneProps {
 
 export function Scene({ handlers, children, onBackgroundClick }: SceneProps) {
   const setSelection = useSim((s) => s.setSelection);
+  const pixel = useSim((s) => s.pixel);
   return (
     <Canvas
       className="scene"
       dpr={[1, 2]}
-      gl={{ antialias: true, powerPreference: 'high-performance' }}
+      shadows
+      gl={{ antialias: !pixel, powerPreference: 'high-performance' }}
       onPointerMissed={() => {
         setSelection(null);
         onBackgroundClick?.();
       }}
     >
-      <color attach="background" args={['#0b0f14']} />
-      <fog attach="fog" args={['#0b0f14', 60, 160]} />
-      <ambientLight intensity={0.55} />
-      <hemisphereLight args={['#bcd7ff', '#1a1f26', 0.6]} />
-      <directionalLight position={[12, 20, 8]} intensity={1.2} />
-      <Grid
-        args={[200, 200]}
-        position={[0, -0.01, 0]}
-        cellSize={1}
-        cellThickness={0.5}
-        cellColor="#16202b"
-        sectionSize={5}
-        sectionThickness={1}
-        sectionColor="#1f2d3b"
-        fadeDistance={90}
-        fadeStrength={1.5}
-        infiniteGrid
+      <color attach="background" args={['#0d0b1e']} />
+      <fog attach="fog" args={['#14103a', 70, 170]} />
+      <Sky />
+      <ambientLight intensity={0.5} color="#b9b2ff" />
+      <hemisphereLight args={['#c7d2ff', '#2a1b4a', 0.7]} />
+      <directionalLight
+        position={[14, 26, 10]}
+        intensity={1.5}
+        color="#fff3dc"
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-40}
+        shadow-camera-right={40}
+        shadow-camera-top={40}
+        shadow-camera-bottom={-40}
+        shadow-bias={-0.0005}
       />
+      <Islands />
+      <Dust />
       <CameraRig />
       <SimTicker />
       <DevHandle />
@@ -70,6 +73,7 @@ export function Scene({ handlers, children, onBackgroundClick }: SceneProps) {
       <DropBursts />
       <LabelProjector />
       {children}
+      {pixel && <Pixelation />}
     </Canvas>
   );
 }

@@ -5,71 +5,11 @@ import type { NodeJson } from '../engine';
 import { sim, useSim } from '../state/sim';
 import { DEVICE_COLORS } from './colors';
 import { linkGeometry, nodePos, portAnchors } from './layout';
+import { HostVoxel, RouterVoxel, SwitchVoxel } from './voxels';
 
 export interface DeviceHandlers {
   onPointerDown?: (node: NodeJson, e: ThreeEvent<PointerEvent>) => void;
   onPortClick?: (node: NodeJson, iface: string, e: ThreeEvent<MouseEvent>) => void;
-}
-
-function HostMesh({ accent, body }: { accent: string; body: string }) {
-  return (
-    <group>
-      <mesh position={[0, 0.06, 0]} castShadow>
-        <boxGeometry args={[1.0, 0.12, 0.7]} />
-        <meshStandardMaterial color={body} flatShading />
-      </mesh>
-      <mesh position={[0, 0.35, 0]}>
-        <boxGeometry args={[0.12, 0.5, 0.12]} />
-        <meshStandardMaterial color={body} flatShading />
-      </mesh>
-      <mesh position={[0, 0.95, 0]} castShadow>
-        <boxGeometry args={[1.5, 0.95, 0.12]} />
-        <meshStandardMaterial color={body} flatShading />
-      </mesh>
-      <mesh position={[0, 0.95, 0.065]}>
-        <planeGeometry args={[1.32, 0.78]} />
-        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.35} />
-      </mesh>
-    </group>
-  );
-}
-
-function SwitchMesh({ accent, body, ports }: { accent: string; body: string; ports: number }) {
-  return (
-    <group>
-      <mesh position={[0, 0.25, 0]} castShadow>
-        <boxGeometry args={[2.6, 0.5, 1.3]} />
-        <meshStandardMaterial color={body} flatShading />
-      </mesh>
-      <mesh position={[0, 0.505, 0]}>
-        <boxGeometry args={[2.4, 0.02, 1.1]} />
-        <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.15} />
-      </mesh>
-      {Array.from({ length: ports }, (_, i) => (
-        <mesh key={i} position={[-1.05 + (2.1 / Math.max(1, ports - 1)) * i, 0.25, 0.66]}>
-          <boxGeometry args={[0.16, 0.12, 0.02]} />
-          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.5} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function RouterMesh({ accent, body }: { accent: string; body: string }) {
-  return (
-    <group>
-      <mesh position={[0, 0.3, 0]} castShadow>
-        <cylinderGeometry args={[1.05, 1.05, 0.6, 10]} />
-        <meshStandardMaterial color={body} flatShading />
-      </mesh>
-      {[0, 1, 2, 3].map((i) => (
-        <mesh key={i} position={[Math.cos((i * Math.PI) / 2) * 0.5, 0.65, Math.sin((i * Math.PI) / 2) * 0.5]} rotation={[0, -(i * Math.PI) / 2, -Math.PI / 2]}>
-          <coneGeometry args={[0.14, 0.32, 4]} />
-          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.4} flatShading />
-        </mesh>
-      ))}
-    </group>
-  );
 }
 
 function Device({ node, handlers }: { node: NodeJson; handlers: DeviceHandlers }) {
@@ -78,16 +18,21 @@ function Device({ node, handlers }: { node: NodeJson; handlers: DeviceHandlers }
   const focusNode = useSim((s) => s.focusNode);
   const setSelection = useSim((s) => s.setSelection);
   const ringRef = useRef<THREE.Mesh>(null);
-  const { body, accent } = DEVICE_COLORS[node.type];
+  const { accent } = DEVICE_COLORS[node.type];
   const pos = nodePos(node);
+  const bob = useRef<THREE.Group>(null);
+  const phase = useMemo(() => (node.position.x * 1.7 + node.position.y * 2.3) % 6.28, [node.position.x, node.position.y]);
 
   useFrame(({ clock }) => {
     if (ringRef.current) ringRef.current.rotation.z = clock.elapsedTime * 0.6;
+    // gentle idle bob, like a floating diorama piece
+    if (bob.current) bob.current.position.y = Math.sin(clock.elapsedTime * 1.4 + phase) * 0.04;
   });
 
   return (
     <group position={pos}>
       <group
+        ref={bob}
         onClick={(e) => {
           e.stopPropagation();
           setSelection({ kind: 'node', id: node.id });
@@ -103,9 +48,9 @@ function Device({ node, handlers }: { node: NodeJson; handlers: DeviceHandlers }
         }}
         onPointerOut={() => (document.body.style.cursor = '')}
       >
-        {node.type === 'host' && <HostMesh body={body} accent={accent} />}
-        {node.type === 'switch' && <SwitchMesh body={body} accent={accent} ports={node.interfaces.length} />}
-        {node.type === 'router' && <RouterMesh body={body} accent={accent} />}
+        {node.type === 'host' && <HostVoxel nodeId={node.id} />}
+        {node.type === 'switch' && <SwitchVoxel nodeId={node.id} ports={node.interfaces.map((i) => i.id)} />}
+        {node.type === 'router' && <RouterVoxel nodeId={node.id} ifaces={node.interfaces.map((i) => i.id)} />}
         {/* generous invisible hit area */}
         <mesh position={[0, 0.5, 0]} visible={false}>
           <cylinderGeometry args={[1.3, 1.3, 1.4, 8]} />
@@ -113,7 +58,7 @@ function Device({ node, handlers }: { node: NodeJson; handlers: DeviceHandlers }
       </group>
       {selected && (
         <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-          <ringGeometry args={[1.55, 1.75, 6]} />
+          <ringGeometry args={[1.6, 1.85, 4]} />
           <meshBasicMaterial color={accent} transparent opacity={0.9} toneMapped={false} />
         </mesh>
       )}

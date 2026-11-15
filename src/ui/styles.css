@@ -219,10 +219,10 @@ table.tbl { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
 /* ---------- learning layer */
 .bubble-anchor { z-index: 6; }
 .bubble {
-  pointer-events: auto; width: max-content; max-width: 250px; margin-bottom: 6px;
+  pointer-events: auto; width: max-content; max-width: 230px; margin-bottom: 6px;
   background: #fffdf5; color: #1a1630; border: 2px solid #1a1630; border-radius: 3px;
-  box-shadow: 3px 3px 0 rgba(5, 4, 13, 0.85); padding: 5px 8px 6px; font: 12px/1.35 var(--sans);
-  position: relative; animation: bubble-life 9s steps(1, end) forwards, bubble-in 0.18s ease-out;
+  box-shadow: 3px 3px 0 rgba(5, 4, 13, 0.85); padding: 4px 8px 5px; font: 11.5px/1.35 var(--sans);
+  position: relative; animation: bubble-life 7s linear forwards, bubble-in 0.18s ease-out;
 }
 .bubble::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 6px solid transparent; border-top-color: #1a1630; border-bottom: 0; }
 .bubble.paused { animation-play-state: paused; }
@@ -310,3 +310,5 @@ table.tbl { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
 .ev.tone-info .tx { color: var(--text); } .ev.tone-muted .tx { color: var(--text-faint); }
 .topbar .chk { font-size: 12px; }
 .island-label { font: 700 11px var(--pixel); color: #9be8d8; background: rgba(13, 11, 30, 0.75); padding: 1px 6px; border: 1.5px solid #2b6b62; border-radius: 2px; white-space: nowrap; }
+.labels > .island-label-anchor { transform-origin: 0 0; }
+.island-label-anchor .island-label { display: inline-block; transform: translate(50%, 100%); }
