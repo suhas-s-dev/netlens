@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { formatDuration, type ArpRow, type DeviceState, type MacRow, type RouteRow } from '../engine';
+import { COLUMN_NOTES } from '../learn/fieldNotes';
 import { sim, useSim, type Highlight } from '../state/sim';
+import { ConceptCard, Q } from './learn/ConceptCard';
 
 const FRESH_MS = 3000;
 
@@ -44,10 +46,10 @@ function ArpTable({ nodeId, rows, showIface }: { nodeId: string; rows: ArpRow[];
     <table className="tbl">
       <thead>
         <tr>
-          {showIface && <th>If</th>}
-          <th>IP</th>
-          <th>MAC</th>
-          <th>Expires</th>
+          {showIface && <th title={COLUMN_NOTES['arp.if']}>If</th>}
+          <th title={COLUMN_NOTES['arp.ip']}>IP</th>
+          <th title={COLUMN_NOTES['arp.mac']}>MAC</th>
+          <th title={COLUMN_NOTES['arp.expires']}>Expires</th>
         </tr>
       </thead>
       <tbody>
@@ -83,9 +85,9 @@ function MacTable({ nodeId, rows }: { nodeId: string; rows: MacRow[] }) {
     <table className="tbl">
       <thead>
         <tr>
-          <th>Port</th>
-          <th>MAC</th>
-          <th>Ages out in</th>
+          <th title={COLUMN_NOTES['mac.port']}>Port</th>
+          <th title={COLUMN_NOTES['mac.mac']}>MAC</th>
+          <th title={COLUMN_NOTES['mac.expires']}>Ages out in</th>
         </tr>
       </thead>
       <tbody>
@@ -120,10 +122,10 @@ function RouteTable({ rows }: { rows: RouteRow[] }) {
     <table className="tbl">
       <thead>
         <tr>
-          <th>Prefix</th>
-          <th>Next hop</th>
-          <th>If</th>
-          <th>Type</th>
+          <th title={COLUMN_NOTES['route.prefix']}>Prefix</th>
+          <th title={COLUMN_NOTES['route.nexthop']}>Next hop</th>
+          <th title={COLUMN_NOTES['route.if']}>If</th>
+          <th title={COLUMN_NOTES['route.type']}>Type</th>
         </tr>
       </thead>
       <tbody>
@@ -178,6 +180,44 @@ function Ports({ st }: { st: DeviceState }) {
   );
 }
 
+const TONE_ICON: Record<string, string> = { info: '›', good: '✓', warn: '?', bad: '✕', muted: '·' };
+
+/** The device's recent decisions, explained, newest first. */
+function Activity({ nodeId }: { nodeId: string }) {
+  const log = useSim((s) => s.log);
+  const items = [];
+  for (let i = log.length - 1; i >= 0 && items.length < 6; i--) {
+    const e = log[i]!;
+    if (e.node !== nodeId || e.type === 'tx' || e.type === 'rx') continue;
+    const x = sim.explain(e);
+    if (x.weight !== 'key') continue;
+    items.push({ e, x });
+  }
+  if (!items.length) return <div className="hint">Nothing yet. Press Play, or send a ping from the panel on the left.</div>;
+  return (
+    <div className="activity">
+      {items.map(({ e, x }) => (
+        <div key={e.seq} className={`act tone-${x.tone}`}>
+          <span className="ico">{TONE_ICON[x.tone]}</span>
+          <div>
+            <div>
+              {x.say} {x.concept && <Q id={x.concept} />}
+            </div>
+            {x.why && <div className="why">Why: {x.why}</div>}
+            <div className="when">t = {(e.time / 1e6).toFixed(3)} ms</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const TABLE_GUIDE = {
+  host: 'Its ARP cache: the IP → MAC answers it has learned. Empty means its next packet will start with an ARP broadcast.',
+  switch: 'Its MAC table: which device is behind which port. Watch it fill up as frames arrive. Unknown destinations get flooded.',
+  router: 'Its routing table decides where each packet goes next; its ARP cache holds the MACs of neighbours on each interface.',
+} as const;
+
 export function DevicePanel({ nodeId }: { nodeId: string }) {
   useSim((s) => s.version);
   useSim((s) => s.engineGen);
@@ -194,12 +234,20 @@ export function DevicePanel({ nodeId }: { nodeId: string }) {
           Fly to
         </button>
       </div>
-      <h4>{st.kind === 'switch' ? 'Ports' : 'Interfaces'}</h4>
+      <ConceptCard id={st.kind} />
+      <h4>What it just did</h4>
+      <Activity nodeId={nodeId} />
+      <div className="hint">{TABLE_GUIDE[st.kind]}</div>
+      <h4>
+        {st.kind === 'switch' ? 'Ports' : 'Interfaces'} <Q id="port" />
+      </h4>
       <Ports st={st} />
       {st.kind === 'host' && (
         <>
           <div className="hint">Default gateway: {st.gateway ?? 'none'}</div>
-          <h4>ARP cache</h4>
+          <h4>
+            ARP cache <Q id="arp-cache" />
+          </h4>
           <ArpTable nodeId={nodeId} rows={st.arp} showIface={false} />
           {st.sessions.length > 0 && (
             <>
@@ -224,16 +272,23 @@ export function DevicePanel({ nodeId }: { nodeId: string }) {
       )}
       {st.kind === 'switch' && (
         <>
-          <h4>MAC address table</h4>
+          <h4>
+            MAC address table <Q id="mac-table" />
+          </h4>
           <MacTable nodeId={nodeId} rows={st.mac} />
           <div className="hint">Entries age out after {formatDuration(st.agingNs)} without traffic from that address.</div>
         </>
       )}
       {st.kind === 'router' && (
         <>
-          <h4>Routing table</h4>
+          <h4>
+            Routing table <Q id="routing-table" />
+          </h4>
           <RouteTable rows={st.routes} />
-          <h4>ARP cache</h4>
+          <div className="hint">Rows are in lookup order: the most specific prefix that matches wins <Q id="lpm" /></div>
+          <h4>
+            ARP cache <Q id="arp-cache" />
+          </h4>
           <ArpTable nodeId={nodeId} rows={st.arp} showIface />
         </>
       )}

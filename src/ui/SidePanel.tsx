@@ -1,7 +1,10 @@
 import { DEFAULT_LINK_BANDWIDTH_MBPS, DEFAULT_LINK_LATENCY_MS } from '../engine';
 import { sim, useSim } from '../state/sim';
+import { LESSONS } from '../learn/lessons';
+import { startLesson } from '../state/lesson';
 import { DevicePanel } from './DevicePanel';
 import { EditorPanel } from './editor/EditorPanel';
+import { ConceptCard } from './learn/ConceptCard';
 import { PacketInspector } from './PacketInspector';
 
 function LinkPanel({ linkId }: { linkId: string }) {
@@ -32,12 +35,30 @@ function LinkPanel({ linkId }: { linkId: string }) {
           </tr>
         </tbody>
       </table>
+      <ConceptCard id="link" title="What is a link?" />
+      <ConceptCard id="serialization" title="Why do big frames take longer?" />
       <h4>On the wire now ({frames.length})</h4>
       {frames.map((f) => (
         <button key={f.packetId} className="btn" style={{ textAlign: 'left' }} onClick={() => setSelection({ kind: 'packet', id: f.packetId! })}>
           {f.text.split(': ').slice(1).join(': ')}
         </button>
       ))}
+    </div>
+  );
+}
+
+function LessonCallout() {
+  const presetId = useSim((s) => s.presetId);
+  const lesson = presetId ? LESSONS[presetId] : undefined;
+  if (!lesson) return null;
+  return (
+    <div className="lesson-callout">
+      <div className="pixel">Guided lesson</div>
+      <b>{lesson.title}</b>
+      <p>{lesson.summary}</p>
+      <button className="btn primary" onClick={() => startLesson(lesson.presetId)}>
+        ▶ Start the lesson
+      </button>
     </div>
   );
 }
@@ -50,6 +71,7 @@ function Welcome() {
         <h3>{topology.name}</h3>
       </div>
       {topology.description && <p style={{ margin: 0, color: 'var(--text-dim)' }}>{topology.description}</p>}
+      <LessonCallout />
       <div className="empty" style={{ textAlign: 'left', padding: 0 }}>
         Press <kbd>Space</kbd> to play or pause, and <kbd>.</kbd> to step one event.
         <br />

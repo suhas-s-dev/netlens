@@ -104,8 +104,18 @@ export function Packets() {
             useSim.getState().setSelection({ kind: 'packet', id });
           }
         }}
+        onPointerMove={(e) => {
+          const id = e.instanceId !== undefined ? ids.current[e.instanceId] : undefined;
+          const cur = useSim.getState().hover;
+          if (!id) return;
+          if (cur?.id !== id || Math.abs(cur.x - e.nativeEvent.clientX) + Math.abs(cur.y - e.nativeEvent.clientY) > 6)
+            useSim.getState().set('hover', { id, x: e.nativeEvent.clientX, y: e.nativeEvent.clientY });
+        }}
         onPointerOver={() => (document.body.style.cursor = 'pointer')}
-        onPointerOut={() => (document.body.style.cursor = '')}
+        onPointerOut={() => {
+          document.body.style.cursor = '';
+          useSim.getState().set('hover', null);
+        }}
       >
         <meshBasicMaterial toneMapped={false} />
       </instancedMesh>

@@ -1,0 +1,82 @@
+/** One-line "what is this field for" notes for header fields and table columns. */
+import type { ConceptId } from './concepts';
+
+export const FIELD_NOTES: Record<string, string> = {
+  'eth.dst': 'Who should receive this frame on this link. Changes at every router hop.',
+  'eth.src': 'MAC of the interface that put this frame on the wire. Switches learn from it.',
+  'eth.type': "What's inside: 0x0800 = IPv4, 0x0806 = ARP.",
+  'eth.padding': 'Zeros added because Ethernet frames must be at least 60 bytes (+4 FCS).',
+  'arp.htype': '1 = Ethernet hardware addresses.',
+  'arp.ptype': 'Which protocol address is being resolved: 0x0800 = IPv4.',
+  'arp.hlen': 'MAC addresses are 6 bytes long.',
+  'arp.plen': 'IPv4 addresses are 4 bytes long.',
+  'arp.oper': '1 = request ("who has?"), 2 = reply ("is at").',
+  'arp.sha': "Asker's / answerer's MAC. Receivers cache this.",
+  'arp.spa': "Sender's IP address.",
+  'arp.tha': 'Unknown in a request (all zeros); the asker\'s MAC in a reply.',
+  'arp.tpa': 'The IP address we want the MAC for.',
+  'ipv4.version': 'Always 4 for IPv4.',
+  'ipv4.ihl': 'Header length in 32-bit words. 5 = 20 bytes (no options).',
+  'ipv4.dscp': 'Priority / QoS marking. 0 = best effort.',
+  'ipv4.ecn': 'Explicit Congestion Notification bits.',
+  'ipv4.len': 'Size of the whole IP packet (header + data) in bytes.',
+  'ipv4.id': 'Identifies the packet, used to reassemble fragments.',
+  'ipv4.flags': "DF = Don't Fragment, MF = More Fragments follow.",
+  'ipv4.frag': 'Where this fragment sits in the original packet (×8 bytes).',
+  'ipv4.ttl': 'Hop budget. Each router subtracts 1; at 0 the packet is dropped.',
+  'ipv4.proto': "What's inside: 1 = ICMP, 6 = TCP, 17 = UDP.",
+  'ipv4.checksum': 'Detects header corruption. Recomputed at every hop because TTL changes.',
+  'ipv4.src': 'Original sender. Unchanged end to end (without NAT).',
+  'ipv4.dst': 'Final destination. Routers look this up in their routing table.',
+  'ipv4.options': 'Rarely used extra header fields.',
+  'icmp.type': '8 = echo request, 0 = echo reply, 11 = time exceeded, 3 = unreachable.',
+  'icmp.code': 'Sub-type, e.g. for unreachable: 0 = network, 1 = host.',
+  'icmp.checksum': 'Covers the whole ICMP message.',
+  'icmp.identifier': 'Picked by ping to match replies to the right ping session.',
+  'icmp.sequence': 'Counts each echo: 1, 2, 3…',
+  'icmp.data': 'Payload; the reply echoes it back unchanged.',
+  'icmp.unused': 'Must be zero for these error types.',
+  'icmp.original': 'Start of the packet that caused the error, so the sender knows which one failed.',
+  data: 'Payload carried by this layer.',
+};
+
+export const FIELD_CONCEPT: Record<string, ConceptId> = {
+  'eth.dst': 'mac',
+  'eth.src': 'mac',
+  'eth.type': 'ethernet',
+  'arp.oper': 'arp',
+  'ipv4.ttl': 'ttl',
+  'ipv4.checksum': 'checksum',
+  'ipv4.src': 'ip',
+  'ipv4.dst': 'ip',
+  'icmp.type': 'icmp',
+  'icmp.original': 'icmp',
+};
+
+export const LAYER_CONCEPT: Record<string, ConceptId> = {
+  'Ethernet II': 'ethernet',
+  ARP: 'arp',
+  IPv4: 'ip',
+  ICMP: 'icmp',
+};
+
+export const LAYER_BLURB: Record<string, string> = {
+  'Ethernet II': 'Layer 2: delivers the frame across this one cable/LAN, using MAC addresses.',
+  ARP: 'Finds the MAC address that belongs to an IP address on the local network.',
+  IPv4: 'Layer 3: end-to-end addressing. Routers read this to choose the next hop.',
+  ICMP: 'Control messages: ping (echo) and error reports.',
+};
+
+export const COLUMN_NOTES: Record<string, string> = {
+  'arp.ip': 'The IP address that was resolved.',
+  'arp.mac': 'Its hardware (MAC) address, which is what Ethernet frames need.',
+  'arp.expires': 'Time until this entry is forgotten (60 s after it was last learned).',
+  'arp.if': 'Which interface this neighbour is reached through.',
+  'mac.port': 'The switch port this MAC address was last seen on.',
+  'mac.mac': 'A source MAC address the switch has learned.',
+  'mac.expires': 'Forgotten if no frame from this MAC arrives for 300 s.',
+  'route.prefix': 'Destination network. Longer prefixes are more specific.',
+  'route.nexthop': 'Next router to hand the packet to ("direct" = deliver on that LAN).',
+  'route.if': 'Interface the packet leaves through.',
+  'route.type': 'C = connected (automatic), S = static (configured).',
+};

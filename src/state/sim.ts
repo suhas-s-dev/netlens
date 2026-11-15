@@ -8,6 +8,8 @@
  */
 import { create } from 'zustand';
 import { Engine, MS, SEC, type DeviceState, type LinkEndJson, type TopologyJson, type TraceEvent, type TxEvent } from '../engine';
+import type { ConceptId } from '../learn/concepts';
+import { buildCtx, explain, type ExplainCtx, type Tone } from '../learn/explain';
 import { materializeMacs } from './editOps';
 import { autosave } from './storage';
 
@@ -28,6 +30,21 @@ export interface Highlight {
   op: string;
   /** performance.now() when it happened. */
   at: number;
+}
+
+export interface BubbleLine {
+  say: string;
+  tone: Tone;
+  concept?: ConceptId;
+}
+
+/** A device's current speech bubble. Lines that happen at the same sim instant are merged. */
+export interface Bubble {
+  lines: BubbleLine[];
+  /** performance.now() when last updated (drives the fade). */
+  at: number;
+  simTime: number;
+  n: number;
 }
 
 export interface SimStore {
@@ -55,6 +72,18 @@ export interface SimStore {
   lod: 'far' | 'mid' | 'near';
   logFilter: { node: string | null; types: Record<string, boolean> };
   highlights: Record<string, Highlight>;
+  /** Learning layer. */
+  bubbles: Record<string, Bubble>;
+  narration: boolean;
+  explainLog: boolean;
+  /** Glossary panel: a concept id, 'index' for the list, or closed. */
+  glossary: ConceptId | 'index' | null;
+  /** Packet under the pointer, with screen position for the hover card. */
+  hover: { id: string; x: number; y: number } | null;
+  /** Rendering. */
+  pixel: boolean;
+  pixelSize: number;
+  set<K extends keyof SimStore>(k: K, v: SimStore[K]): void;
   setSelection(s: Selection | null): void;
   setSpeed(s: number): void;
   setViewMode(v: 'perspective' | 'iso'): void;
@@ -87,6 +116,14 @@ export const useSim = create<SimStore>((set, get) => ({
   lod: 'far',
   logFilter: { node: null, types: { tx: true, rx: false, drop: true, table: true, decision: true, app: true } },
   highlights: {},
+  bubbles: {},
+  narration: true,
+  explainLog: true,
+  glossary: null,
+  hover: null,
+  pixel: true,
+  pixelSize: 3,
+  set: (k, v) => set({ [k]: v } as Partial<SimStore>),
   setSelection: (selection) => set({ selection }),
   setSpeed: (speed) => set({ speed: Math.min(4, Math.max(0.1, speed)) }),
   setViewMode: (viewMode) => set({ viewMode }),
@@ -138,8 +175,16 @@ export class SimController {
   readonly linkActivity = new Map<string, number>();
   /** Recent drops for the renderer's burst effect (wall-clock time). */
   readonly drops: { node: string; at: number; bystander: boolean }[] = [];
+  /** Recent successful deliveries (ping replies) for a sparkle effect. */
+  readonly sparks: { node: string; at: number }[] = [];
   private pending: TraceEvent[] = [];
+  private pendingBubbles = new Map<string, { lines: BubbleLine[]; simTime: number }>();
   private lastFlush = 0;
+  private ctx: ExplainCtx = buildCtx({ version: 1, name: '', nodes: [], links: [] }, new Map());
+  /** Lesson hook: return true to pause the simulation right after this event. */
+  watcher: ((e: TraceEvent) => boolean) | null = null;
+  onWatchHit: (() => void) | null = null;
+  private stopRequested = false;
   private idleWall = 0;
   private unsubscribe: () => void = () => {};
 
@@ -156,7 +201,11 @@ export class SimController {
     this.packets.clear();
     this.linkActivity.clear();
     this.drops.length = 0;
+    this.sparks.length = 0;
     this.pending = [];
+    this.pendingBubbles.clear();
+    this.stopRequested = false;
+    this.ctx = buildCtx(topology, this.packets);
     this.engine = engine;
     this.unsubscribe = this.engine.on((e) => this.onEvent(e));
     useSim.setState((s) => ({
@@ -169,6 +218,8 @@ export class SimController {
       version: s.version + 1,
       log: [],
       highlights: {},
+      bubbles: {},
+      hover: null,
       playing: false,
       selection: s.selection?.kind === 'node' && topology.nodes.some((n) => n.id === s.selection!.id) ? s.selection : null,
     }));
@@ -189,8 +240,40 @@ export class SimController {
     } else if (e.type === 'rx') {
       this.inFlight.delete(e.packetId!);
       this.linkActivity.set(e.link, performance.now());
+    } else if (e.type === 'app' && e.status === 'reply') {
+      this.sparks.push({ node: e.node, at: performance.now() });
+      if (this.sparks.length > 64) this.sparks.shift();
     }
     this.pending.push(e);
+    this.narrate(e);
+    if (this.watcher?.(e)) this.stopRequested = true;
+  }
+
+  explain(e: TraceEvent) {
+    return explain(e, this.ctx);
+  }
+
+  get explainCtx(): ExplainCtx {
+    return this.ctx;
+  }
+
+  private narrate(e: TraceEvent): void {
+    if (!e.node || e.type === 'tx' || e.type === 'rx') return;
+    const x = explain(e, this.ctx);
+    if (x.weight !== 'key') return;
+    const line: BubbleLine = { say: x.say, tone: x.tone };
+    if (x.concept) line.concept = x.concept;
+    const cur = this.pendingBubbles.get(e.node) ?? (() => {
+      const b = useSim.getState().bubbles[e.node];
+      return b && b.simTime === e.time ? { lines: [...b.lines], simTime: b.simTime } : undefined;
+    })();
+    if (cur && cur.simTime === e.time) {
+      if (!cur.lines.some((l) => l.say === line.say)) cur.lines.push(line);
+      if (cur.lines.length > 3) cur.lines.splice(0, cur.lines.length - 3);
+      this.pendingBubbles.set(e.node, cur);
+    } else {
+      this.pendingBubbles.set(e.node, { lines: [line], simTime: e.time });
+    }
   }
 
   play(): void {
@@ -208,9 +291,13 @@ export class SimController {
     // Skip pure bookkeeping (tx-done) so each click shows something meaningful.
     for (let i = 0; i < 50; i++) {
       const ev = this.engine.step();
-      if (!ev || this.pending.length) break;
+      if (!ev || this.pending.length || this.stopRequested) break;
     }
     this.flush();
+    if (this.stopRequested) {
+      this.stopRequested = false;
+      this.onWatchHit?.();
+    }
   }
 
   /** Called every animation frame with the wall-clock delta in seconds. */
@@ -228,7 +315,19 @@ export class SimController {
     } else {
       this.idleWall = 0;
     }
-    e.runUntil(Math.round(target));
+    // Step event by event so a lesson can stop exactly at the moment it is waiting for.
+    const t = Math.round(target);
+    for (let next = e.peekNext(); next && next.time <= t; next = e.peekNext()) {
+      e.step();
+      if (this.stopRequested) break;
+    }
+    if (this.stopRequested) {
+      this.stopRequested = false;
+      this.pause();
+      this.onWatchHit?.();
+      return;
+    }
+    e.runUntil(t);
     this.flush(false);
   }
 
@@ -257,7 +356,13 @@ export class SimController {
         // forget old highlights
         for (const k of Object.keys(highlights)) if (now - highlights[k]!.at > 4000) delete highlights[k];
       }
-      return { log, simTime, version: s.version + 1, highlights };
+      let bubbles = s.bubbles;
+      if (this.pendingBubbles.size) {
+        bubbles = { ...bubbles };
+        for (const [node, b] of this.pendingBubbles) bubbles[node] = { lines: b.lines, simTime: b.simTime, at: now, n: (bubbles[node]?.n ?? 0) + 1 };
+        this.pendingBubbles.clear();
+      }
+      return { log, simTime, version: s.version + 1, highlights, bubbles };
     });
   }
 

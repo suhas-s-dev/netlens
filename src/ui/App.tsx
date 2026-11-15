@@ -8,7 +8,11 @@ import { sim, useSim } from '../state/sim';
 import { CommandPanel } from './CommandPanel';
 import { Palette } from './editor/Palette';
 import { EventLog } from './EventLog';
+import { Glossary } from './learn/Glossary';
+import { LessonCard } from './learn/LessonCard';
 import { Legend } from './Legend';
+import { PacketHoverCard } from './PacketHoverCard';
+import { useLesson } from '../state/lesson';
 import { SidePanel } from './SidePanel';
 import { TimeControls } from './TimeControls';
 import { Toast } from './Toast';
@@ -34,6 +38,7 @@ function useEditorKeys() {
 
 export function App() {
   const mode = useSim((s) => s.mode);
+  const inLesson = useLesson((s) => !!s.lesson);
   const [logOpen, setLogOpen] = useState(true);
   useEditorKeys();
 
@@ -50,11 +55,13 @@ export function App() {
           {mode === 'edit' && <EditorLayer />}
         </Scene>
         <LabelsLayer />
-        {mode === 'sim' ? <CommandPanel /> : <Palette />}
+        {mode === 'sim' ? inLesson ? <LessonCard /> : <CommandPanel /> : <Palette />}
         <TimeControls />
-        {mode === 'sim' && <Legend />}
+        {mode === 'sim' && !inLesson && <Legend />}
         <Toast />
+        <Glossary />
       </main>
+      <PacketHoverCard />
       <SidePanel />
       <EventLog open={logOpen} onToggle={() => setLogOpen((o) => !o)} />
     </div>

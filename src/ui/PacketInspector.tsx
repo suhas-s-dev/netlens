@@ -2,7 +2,10 @@
 import { useMemo, useState } from 'react';
 import { encodeFrame, formatDuration, summarizeFrame, type FieldSpan, type LayerName, type TxEvent } from '../engine';
 import { PACKET_COLORS, PACKET_LABELS } from '../render/colors';
+import { FIELD_CONCEPT, FIELD_NOTES, LAYER_BLURB, LAYER_CONCEPT } from '../learn/fieldNotes';
+import { explainPacket } from '../learn/explain';
 import { sim, useSim } from '../state/sim';
+import { ConceptCard, Q } from './learn/ConceptCard';
 
 const LAYER_CLASS: Record<LayerName, string> = { 'Ethernet II': 'L-eth', ARP: 'L-arp', IPv4: 'L-ipv4', ICMP: 'L-icmp', Data: 'L-data' };
 const LAYER_COLOR: Record<LayerName, string> = { 'Ethernet II': '#9fb7cf', ARP: 'var(--arp)', IPv4: '#b9a3ff', ICMP: '#7cc4ff', Data: '#9aa4b2' };
@@ -97,6 +100,8 @@ export function PacketInspector({ packetId }: { packetId: string }) {
       <div className="hint" style={{ fontFamily: 'var(--mono)', color: 'var(--text)' }}>
         {summarizeFrame(tx.frame.eth)}
       </div>
+      <div className="story">{explainPacket(tx, sim.explainCtx).say}</div>
+      <ConceptCard id="encapsulation" title="Why does a packet have layers?" />
       <table className="tbl wrap">
         <tbody>
           <tr>
@@ -142,6 +147,9 @@ export function PacketInspector({ packetId }: { packetId: string }) {
               bytes {l.start}–{l.end - 1} ({l.end - l.start} B)
             </span>
           </summary>
+          <div className="layer-blurb">
+            {LAYER_BLURB[l.layer]} {LAYER_CONCEPT[l.layer] && <Q id={LAYER_CONCEPT[l.layer]!} />}
+          </div>
           <div className="fields">
             {l.fields.map((f) => (
               <div key={f.key} className={`field ${activeFields.has(f.key) ? 'hot' : ''}`} onMouseEnter={() => setHotField(f.key)} onMouseLeave={() => setHotField(null)}>
@@ -149,7 +157,9 @@ export function PacketInspector({ packetId }: { packetId: string }) {
                 <span className="v">
                   {f.bits && <span className="bits">{f.bits}</span>}
                   {f.display}
+                  {FIELD_CONCEPT[f.key] && <Q id={FIELD_CONCEPT[f.key]!} />}
                 </span>
+                {activeFields.has(f.key) && FIELD_NOTES[f.key] && <span className="note">{FIELD_NOTES[f.key]}</span>}
               </div>
             ))}
           </div>
@@ -171,7 +181,7 @@ export function PacketInspector({ packetId }: { packetId: string }) {
         ))}
       </div>
       <HexView bytes={enc.bytes} fields={enc.fields} hot={hotBytes} onHover={setHotByte} />
-      <div className="hint">Hover a field to see its bytes, or a byte to see its field. Shown as captured: no preamble or FCS.</div>
+      <div className="hint">Hover a field to see its bytes and what it's for, or hover a byte to find its field. Shown as captured: no preamble or FCS.</div>
       <FlowHops tx={tx} />
     </div>
   );

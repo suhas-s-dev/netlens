@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
+import { LESSONS } from '../learn/lessons';
 import { PRESETS } from '../presets';
+import { startLesson, useLesson } from '../state/lesson';
 import { sim, useSim } from '../state/sim';
 import { deleteSaved, downloadJson, listSaved, parseTopology, saveTopology } from '../state/storage';
 
@@ -114,6 +116,10 @@ export function TopBar() {
   const setViewMode = useSim((s) => s.setViewMode);
   const setMode = useSim((s) => s.setMode);
   const [files, setFiles] = useState(false);
+  const set = useSim((s) => s.set);
+  const narration = useSim((s) => s.narration);
+  const pixel = useSim((s) => s.pixel);
+  const inLesson = useLesson((s) => !!s.lesson);
 
   return (
     <header className="topbar">
@@ -156,6 +162,22 @@ export function TopBar() {
         </button>
       </div>
       <span className="spacer" />
+      {presetId && LESSONS[presetId] && !inLesson && (
+        <button className="btn primary" onClick={() => startLesson(presetId)} title={LESSONS[presetId]!.summary}>
+          ▶ Lesson
+        </button>
+      )}
+      <button className="btn" onClick={() => set('glossary', 'index')} title="Every networking term used here, explained">
+        Glossary
+      </button>
+      <label className="chk" title="Devices explain what they are doing in speech bubbles">
+        <input type="checkbox" checked={narration} onChange={(e) => set('narration', e.target.checked)} />
+        Narration
+      </label>
+      <label className="chk" title="Pixel-art rendering">
+        <input type="checkbox" checked={pixel} onChange={(e) => set('pixel', e.target.checked)} />
+        Pixel
+      </label>
       <button className="btn" onClick={() => setFiles(true)}>
         Save / Load
       </button>

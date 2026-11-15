@@ -20,6 +20,8 @@ export function EventLog({ open, onToggle }: { open: boolean; onToggle: () => vo
   const selection = useSim((s) => s.selection);
   const setSelection = useSim((s) => s.setSelection);
   const focusNode = useSim((s) => s.focusNode);
+  const explainLog = useSim((s) => s.explainLog);
+  const set = useSim((s) => s.set);
   const [follow, setFollow] = useState(true);
   const body = useRef<HTMLDivElement>(null);
 
@@ -80,6 +82,10 @@ export function EventLog({ open, onToggle }: { open: boolean; onToggle: () => vo
               </label>
             ))}
             <span style={{ flex: 1 }} />
+            <label className="chk" title="Show each event as a plain-English explanation instead of engine output">
+              <input type="checkbox" checked={explainLog} onChange={(e) => set('explainLog', e.target.checked)} />
+              plain English
+            </label>
             <span className="hint">{follow ? 'following' : 'scroll to bottom to follow'}</span>
           </>
         )}
@@ -89,11 +95,13 @@ export function EventLog({ open, onToggle }: { open: boolean; onToggle: () => vo
           {rows.length === 0 && <div className="empty">No events yet. Press Play, or send a ping.</div>}
           {rows.map((e) => {
             const sel = selection?.kind === 'packet' && e.packetId === selection.id;
+            const x = explainLog && e.type !== 'tx' && e.type !== 'rx' ? sim.explain(e) : null;
+            const who = e.node ? (nodes.find((n) => n.id === e.node)?.name ?? e.node) : '';
             return (
-              <div key={e.seq} className={`ev ${e.type} ${sel ? 'sel' : ''}`} onClick={() => onPick(e)} title={e.text}>
+              <div key={e.seq} className={`ev ${e.type} ${sel ? 'sel' : ''} ${x ? `tone-${x.tone}` : ''}`} onClick={() => onPick(e)} title={x ? `${e.text}${x.why ? `\nWhy: ${x.why}` : ''}` : e.text}>
                 <span className="t">{(e.time / 1e6).toFixed(3)} ms</span>
                 <span className="ty">{e.type === 'app' ? e.app : e.type}</span>
-                <span className="tx">{e.text}</span>
+                <span className="tx">{x ? `${who}: ${x.say}` : e.text}</span>
               </div>
             );
           })}

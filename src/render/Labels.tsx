@@ -71,6 +71,41 @@ function DeviceLabel({ node }: { node: NodeJson }) {
   );
 }
 
+const TONE_ICON: Record<string, string> = { info: '›', good: '✓', warn: '?', bad: '✕', muted: '·' };
+
+/** The device "talking": what it just did and why, in its own voice. */
+function DeviceBubble({ node }: { node: NodeJson }) {
+  const bubble = useSim((s) => s.bubbles[node.id]);
+  const playing = useSim((s) => s.playing);
+  const narration = useSim((s) => s.narration);
+  const set = useSim((s) => s.set);
+  const pos = useMemo(() => nodePos(node).setY(node.type === 'host' ? 2.7 : 2.1), [node]);
+  const ref = useLabel(`bubble:${node.id}`, pos);
+  const show = narration && !!bubble;
+  return (
+    <div ref={ref} className="bubble-anchor" style={{ visibility: 'hidden' }}>
+      {show && (
+        <div key={bubble.n} className={`bubble ${playing ? '' : 'paused'} tone-${bubble.lines[bubble.lines.length - 1]!.tone}`}>
+          <div className="bubble-who">{node.name}</div>
+          {bubble.lines.map((l, i) => (
+            <div key={i} className={`bubble-line tone-${l.tone}`}>
+              <span className="ico">{TONE_ICON[l.tone]}</span>
+              <span>
+                {l.say}
+                {l.concept && (
+                  <button className="concept-chip" onClick={() => set('glossary', l.concept!)} title="What does this mean?">
+                    ?
+                  </button>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PortLabel({ id, label, pos }: { id: string; label: string; pos: THREE.Vector3 }) {
   const ref = useLabel(`port:${id}`, pos);
   return (
@@ -101,6 +136,7 @@ export function LabelsLayer() {
         <DeviceLabel key={n.id} node={n} />
       ))}
       {(lod === 'near' || mode === 'edit') && ports.map((p) => <PortLabel key={p.id} {...p} />)}
+      {mode === 'sim' && topology.nodes.map((n) => <DeviceBubble key={`b-${n.id}`} node={n} />)}
     </div>
   );
 }
