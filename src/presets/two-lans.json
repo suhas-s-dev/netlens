@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "Two LANs + router",
+  "description": "Two subnets joined by a router. H1 sends to its default gateway for the remote subnet; each segment runs its own ARP (no proxy ARP), and the router forwards between them.",
+  "seed": 1,
+  "nodes": [
+    { "id": "h1", "name": "H1", "type": "host", "position": { "x": -12, "y": 4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.10/24" }], "gateway": "10.0.1.1" },
+    { "id": "h2", "name": "H2", "type": "host", "position": { "x": -12, "y": -4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.11/24" }], "gateway": "10.0.1.1" },
+    { "id": "sw1", "name": "SW1", "type": "switch", "position": { "x": -6, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] },
+    { "id": "r1", "name": "R1", "type": "router", "position": { "x": 0, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.1/24" }, { "id": "eth1", "ip": "10.0.2.1/24" }], "staticRoutes": [] },
+    { "id": "sw2", "name": "SW2", "type": "switch", "position": { "x": 6, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] },
+    { "id": "h3", "name": "H3", "type": "host", "position": { "x": 12, "y": 4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.2.15/24" }], "gateway": "10.0.2.1" },
+    { "id": "h4", "name": "H4", "type": "host", "position": { "x": 12, "y": -4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.2.16/24" }], "gateway": "10.0.2.1" }
+  ],
+  "links": [
+    { "id": "l1", "a": { "node": "h1", "iface": "eth0" }, "b": { "node": "sw1", "iface": "1" } },
+    { "id": "l2", "a": { "node": "h2", "iface": "eth0" }, "b": { "node": "sw1", "iface": "2" } },
+    { "id": "l3", "a": { "node": "sw1", "iface": "4" }, "b": { "node": "r1", "iface": "eth0" } },
+    { "id": "l4", "a": { "node": "r1", "iface": "eth1" }, "b": { "node": "sw2", "iface": "4" } },
+    { "id": "l5", "a": { "node": "h3", "iface": "eth0" }, "b": { "node": "sw2", "iface": "1" } },
+    { "id": "l6", "a": { "node": "h4", "iface": "eth0" }, "b": { "node": "sw2", "iface": "2" } }
+  ],
+  "scenario": [
+    { "at": 0, "action": "ping", "node": "h1", "dst": "10.0.2.15", "count": 2 },
+    { "at": 3000, "action": "ping", "node": "h2", "dst": "10.0.1.10", "count": 1 }
+  ]
+}

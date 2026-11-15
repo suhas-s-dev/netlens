@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "name": "Three-router chain",
+  "description": "Static routes across three routers. Traceroute discovers each hop through ICMP Time Exceeded; a ping to 10.0.99.1 has no route at R2 and comes back as Destination Net Unreachable.",
+  "seed": 1,
+  "nodes": [
+    { "id": "h1", "name": "H1", "type": "host", "position": { "x": -16, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.10/24" }], "gateway": "10.0.1.1" },
+    { "id": "sw1", "name": "SW1", "type": "switch", "position": { "x": -11, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] },
+    { "id": "r1", "name": "R1", "type": "router", "position": { "x": -6, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.1/24" }, { "id": "eth1", "ip": "10.0.12.1/30" }],
+      "staticRoutes": [{ "prefix": "0.0.0.0/0", "nextHop": "10.0.12.2" }] },
+    { "id": "r2", "name": "R2", "type": "router", "position": { "x": 0, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.12.2/30" }, { "id": "eth1", "ip": "10.0.23.1/30" }],
+      "staticRoutes": [{ "prefix": "10.0.1.0/24", "nextHop": "10.0.12.1" }, { "prefix": "10.0.3.0/24", "nextHop": "10.0.23.2" }] },
+    { "id": "r3", "name": "R3", "type": "router", "position": { "x": 6, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.23.2/30" }, { "id": "eth1", "ip": "10.0.3.1/24" }],
+      "staticRoutes": [{ "prefix": "10.0.0.0/16", "nextHop": "10.0.23.1" }] },
+    { "id": "sw2", "name": "SW2", "type": "switch", "position": { "x": 11, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] },
+    { "id": "h2", "name": "H2", "type": "host", "position": { "x": 16, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.3.10/24" }], "gateway": "10.0.3.1" }
+  ],
+  "links": [
+    { "id": "l1", "a": { "node": "h1", "iface": "eth0" }, "b": { "node": "sw1", "iface": "1" } },
+    { "id": "l2", "a": { "node": "sw1", "iface": "4" }, "b": { "node": "r1", "iface": "eth0" } },
+    { "id": "l3", "a": { "node": "r1", "iface": "eth1" }, "b": { "node": "r2", "iface": "eth0" }, "latencyMs": 4 },
+    { "id": "l4", "a": { "node": "r2", "iface": "eth1" }, "b": { "node": "r3", "iface": "eth0" }, "latencyMs": 4 },
+    { "id": "l5", "a": { "node": "r3", "iface": "eth1" }, "b": { "node": "sw2", "iface": "4" } },
+    { "id": "l6", "a": { "node": "h2", "iface": "eth0" }, "b": { "node": "sw2", "iface": "1" } }
+  ],
+  "scenario": [
+    { "at": 0, "action": "traceroute", "node": "h1", "dst": "10.0.3.10" },
+    { "at": 2000, "action": "ping", "node": "h1", "dst": "10.0.99.1", "count": 1 }
+  ]
+}

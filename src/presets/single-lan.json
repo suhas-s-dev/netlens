@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "Single LAN",
+  "description": "Three hosts on one switch. Watch ARP broadcasts flood, the switch learn MAC addresses port by port, and later unicast traffic go only where it needs to.",
+  "seed": 1,
+  "nodes": [
+    { "id": "h1", "name": "H1", "type": "host", "position": { "x": -6, "y": 4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.0.10/24" }] },
+    { "id": "h2", "name": "H2", "type": "host", "position": { "x": 0, "y": 6 }, "interfaces": [{ "id": "eth0", "ip": "10.0.0.20/24" }] },
+    { "id": "h3", "name": "H3", "type": "host", "position": { "x": 6, "y": 4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.0.30/24" }] },
+    { "id": "sw1", "name": "SW1", "type": "switch", "position": { "x": 0, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] }
+  ],
+  "links": [
+    { "id": "l1", "a": { "node": "h1", "iface": "eth0" }, "b": { "node": "sw1", "iface": "1" } },
+    { "id": "l2", "a": { "node": "h2", "iface": "eth0" }, "b": { "node": "sw1", "iface": "2" } },
+    { "id": "l3", "a": { "node": "h3", "iface": "eth0" }, "b": { "node": "sw1", "iface": "3" } }
+  ],
+  "scenario": [
+    { "at": 0, "action": "ping", "node": "h1", "dst": "10.0.0.30", "count": 2 },
+    { "at": 2500, "action": "ping", "node": "h2", "dst": "10.0.0.10", "count": 1 }
+  ]
+}
