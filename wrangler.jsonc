@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "netlens",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // SPA fallback: unknown paths serve index.html.
+    "not_found_handling": "single-page-application",
+    // Static assets are served directly; the Worker only runs for /api/*.
+    "run_worker_first": ["/api/*"]
+  }
+  // Phase 4: add a Durable Object binding here, e.g.
+  // "durable_objects": { "bindings": [{ "name": "SESSIONS", "class_name": "SessionRoom" }] },
+  // "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SessionRoom"] }]
+}
