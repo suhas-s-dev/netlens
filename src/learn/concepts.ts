@@ -28,7 +28,15 @@ export type ConceptId =
   | 'traceroute'
   | 'unreachable'
   | 'serialization'
-  | 'propagation';
+  | 'propagation'
+  | 'mtu'
+  | 'fragmentation'
+  | 'df'
+  | 'reassembly'
+  | 'pmtud'
+  | 'mtr'
+  | 'packet-loss'
+  | 'packet-anatomy';
 
 export interface Concept {
   id: ConceptId;
@@ -245,6 +253,64 @@ const C: Concept[] = [
     short: 'Time for the signal to travel the length of the cable.',
     body: 'It depends on distance, not on frame size: about 5 µs per kilometre of fibre. Links here default to 2 ms so you can watch packets travel.',
     related: ['serialization', 'link'],
+  },
+  {
+    id: 'mtu',
+    title: 'MTU',
+    short: 'Maximum Transmission Unit: the biggest IP packet a link carries in one frame (1500 bytes on Ethernet).',
+    body: 'MTU counts the whole IP packet: IP header + transport header + data, but not the 14-byte Ethernet header. Tunnels, VPNs and some WAN links have smaller MTUs (GRE: 1476). A packet bigger than the next link\'s MTU must be fragmented, or dropped if DF is set.',
+    analogy: 'The height limit of a bridge: lorries taller than it must be unloaded into smaller vans, or turn back.',
+    related: ['fragmentation', 'df', 'pmtud', 'packet-anatomy'],
+  },
+  {
+    id: 'fragmentation',
+    title: 'Fragmentation',
+    short: 'Splitting an IP packet that is bigger than the MTU into pieces that each fit.',
+    body: 'Each fragment repeats the IP header with the same Identification. The data is cut into slices whose size (except the last) is a multiple of 8 bytes. Fragment Offset says where a slice belongs, in 8-byte units; More Fragments (MF) is 1 on every piece except the last. Routers can fragment again, but only the final destination reassembles. Losing one fragment loses the whole packet.',
+    analogy: 'Posting a long document in several numbered envelopes: "pages 1–5 of 12, more to come".',
+    related: ['mtu', 'reassembly', 'df'],
+  },
+  {
+    id: 'df',
+    title: "Don't Fragment (DF)",
+    short: 'An IP flag that forbids routers from fragmenting the packet.',
+    body: 'If a DF packet is too big for the next link, the router drops it and sends back ICMP "Fragmentation Needed" (type 3, code 4) with the MTU that would have worked. Modern TCP sets DF on every segment and relies on those replies to size its packets.',
+    related: ['pmtud', 'fragmentation', 'icmp'],
+  },
+  {
+    id: 'reassembly',
+    title: 'Reassembly',
+    short: 'Putting fragments back together at the final destination.',
+    body: 'The receiver groups fragments by (source, destination, protocol, Identification) and waits until it has every byte up to the last fragment (MF = 0). If pieces are still missing after a timeout (30 s here), it discards what it has and may send ICMP Time Exceeded (code 1).',
+    related: ['fragmentation'],
+  },
+  {
+    id: 'pmtud',
+    title: 'Path MTU discovery',
+    short: 'Finding the smallest MTU along a path by sending DF packets and listening for "too big".',
+    body: 'Send the largest packet the local link allows, with DF set. Each router that cannot pass it replies "Fragmentation Needed, next-hop MTU = X"; shrink to X and try again until a reply comes back. Hosts cache the result per destination (here for 10 minutes). If firewalls block those ICMP messages, PMTUD fails silently: a "black hole".',
+    related: ['df', 'mtu', 'icmp'],
+  },
+  {
+    id: 'mtr',
+    title: 'MTR',
+    short: 'Traceroute repeated over and over, with loss and latency per hop.',
+    body: 'MTR probes every hop round after round and keeps statistics: how many probes were sent, what percentage got no answer, and best/average/worst round-trip time. Loss that starts at one hop and continues to the destination is real loss; loss at a single middle hop alone usually just means that router rate-limits ICMP replies.',
+    related: ['traceroute', 'ttl', 'packet-loss'],
+  },
+  {
+    id: 'packet-loss',
+    title: 'Packet loss',
+    short: 'Frames that never arrive: noise, congestion, or a faulty link.',
+    body: 'IP itself does not retransmit. Ping shows loss as timeouts; TCP detects it and resends. A lossy link here drops each frame with the configured probability, using the seeded RNG, so every run is reproducible.',
+    related: ['mtr', 'ping'],
+  },
+  {
+    id: 'packet-anatomy',
+    title: 'Packet anatomy',
+    short: 'Headers stacked in front of the data: Ethernet 14 + IPv4 20 + ICMP 8 (or TCP 20 / UDP 8) + payload.',
+    body: 'Overhead adds up: a 1500-byte IP packet carries 1472 bytes of ping data (1500 - 20 - 8), or 1460 bytes of TCP data (1500 - 20 - 20, the MSS). On the wire the frame is 1518 bytes (+14 header, +4 FCS), plus 8 bytes of preamble and a 12-byte gap.',
+    related: ['mtu', 'encapsulation', 'ethernet'],
   },
 ];
 

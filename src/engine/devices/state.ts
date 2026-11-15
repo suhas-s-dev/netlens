@@ -6,6 +6,7 @@ export interface PortView {
   mac: string;
   ip?: string; // CIDR
   linkId?: string;
+  mtu: number;
   queued: number;
   busy: boolean;
 }
@@ -36,7 +37,7 @@ export interface RouteRow {
 
 export interface AppSessionView {
   id: string;
-  app: 'ping' | 'traceroute';
+  app: 'ping' | 'traceroute' | 'pmtud' | 'mtr';
   dst: string;
   done: boolean;
   lines: string[];
@@ -49,10 +50,17 @@ interface Base {
   ports: PortView[];
 }
 
+export interface PmtuRow {
+  dst: string;
+  mtu: number;
+  expiresIn: number;
+}
+
 export interface HostState extends Base {
   kind: 'host';
   gateway: string | null;
   arp: ArpRow[];
+  pmtu: PmtuRow[];
   sessions: AppSessionView[];
 }
 

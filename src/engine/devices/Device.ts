@@ -17,6 +17,8 @@ export interface Port {
   mac: Mac;
   ip?: PortIp;
   linkId?: string;
+  /** Largest IP packet this port will send without fragmenting. */
+  mtu: number;
   txQueue: Frame[];
   txBusy: boolean;
   /** Tail-drop limit for frames waiting behind the one being serialized. */
@@ -27,6 +29,7 @@ export interface PortInit {
   id: string;
   mac: Mac;
   ip?: PortIp;
+  mtu?: number;
 }
 
 export interface SendMeta {
@@ -47,7 +50,7 @@ export abstract class Device {
     ports: PortInit[],
   ) {
     for (const p of ports) {
-      const port: Port = { id: p.id, mac: p.mac, txQueue: [], txBusy: false, maxQueue: DEFAULT_TX_QUEUE };
+      const port: Port = { id: p.id, mac: p.mac, mtu: p.mtu ?? 1500, txQueue: [], txBusy: false, maxQueue: DEFAULT_TX_QUEUE };
       if (p.ip) port.ip = p.ip;
       this.ports.set(p.id, port);
     }

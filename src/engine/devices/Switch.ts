@@ -132,7 +132,7 @@ export class Switch extends Device {
 
 export function portViews(d: Device) {
   return [...d.ports.values()].map((p) => {
-    const v: SwitchState['ports'][number] = { id: p.id, mac: p.mac, queued: p.txQueue.length, busy: p.txBusy };
+    const v: SwitchState['ports'][number] = { id: p.id, mac: p.mac, mtu: p.mtu, queued: p.txQueue.length, busy: p.txBusy };
     if (p.ip) v.ip = `${p.ip.addr}/${p.ip.prefix}`;
     if (p.linkId) v.linkId = p.linkId;
     return v;

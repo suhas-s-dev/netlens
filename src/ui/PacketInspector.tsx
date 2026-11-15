@@ -42,6 +42,60 @@ function HexView({ bytes, fields, hot, onHover }: { bytes: Uint8Array; fields: F
   return <div className="hex">{lines}</div>;
 }
 
+interface Seg {
+  label: string;
+  bytes: number;
+  cls: string;
+  title: string;
+}
+
+/** Header-by-header size breakdown, with the IP packet measured against the egress MTU. */
+function Anatomy({ tx, fields }: { tx: TxEvent; fields: FieldSpan[] }) {
+  const span = (pred: (f: FieldSpan) => boolean) => fields.filter(pred).reduce((n, f) => (f.bits ? n : n + (f.end - f.start)), 0);
+  const ipHdr = span((f) => f.layer === 'IPv4');
+  const icmpData = span((f) => f.key === 'icmp.data' || f.key === 'icmp.original');
+  const icmpHdr = span((f) => f.layer === 'ICMP') - icmpData;
+  const frag = span((f) => f.key === 'data.fragment' || f.key === 'data');
+  const arp = span((f) => f.layer === 'ARP');
+  const pad = span((f) => f.key === 'eth.padding');
+  const segs: Seg[] = [
+    { label: 'Eth', bytes: 14, cls: 'eth', title: 'Ethernet header: 14 bytes (not counted in the MTU)' },
+    ...(arp ? [{ label: 'ARP', bytes: arp, cls: 'arp', title: 'ARP message: 28 bytes' }] : []),
+    ...(ipHdr ? [{ label: 'IP', bytes: ipHdr, cls: 'ipv4', title: `IPv4 header: ${ipHdr} bytes` }] : []),
+    ...(icmpHdr > 0 ? [{ label: 'ICMP', bytes: icmpHdr, cls: 'icmp', title: `ICMP header: ${icmpHdr} bytes` }] : []),
+    ...(icmpData ? [{ label: 'data', bytes: icmpData, cls: 'data', title: `Payload: ${icmpData} bytes` }] : []),
+    ...(frag ? [{ label: 'fragment', bytes: frag, cls: 'data', title: `Fragment data: ${frag} bytes` }] : []),
+    ...(pad ? [{ label: 'pad', bytes: pad, cls: 'pad', title: `Padding to the 60-byte minimum: ${pad} bytes` }] : []),
+    { label: 'FCS', bytes: 4, cls: 'fcs', title: 'Frame check sequence: 4 bytes (added by the NIC; not in the hex view)' },
+  ];
+  const total = segs.reduce((n, s) => n + s.bytes, 0);
+  const p = tx.frame.eth.payload;
+  const mtu = sim.state(tx.node)?.ports.find((x) => x.id === tx.iface)?.mtu ?? 1500;
+  const ipLen = p.kind === 'ipv4' ? p.totalLength : 0;
+  return (
+    <div className="anatomy">
+      <div className="anat-bar">
+        {segs.map((s, i) => (
+          <div key={i} className={`seg-${s.cls}`} style={{ flexGrow: Math.max(s.bytes, total * 0.035) }} title={s.title}>
+            <span>
+              {s.label} {s.bytes}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="hint">
+        Frame {total} bytes on the wire (+8 preamble, +12 gap).
+        {ipLen > 0 && (
+          <>
+            {' '}
+            IP packet: <b>{ipLen}</b> of {mtu} MTU ({Math.round((ipLen / mtu) * 100)}%). <Q id="packet-anatomy" />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function FlowHops({ tx }: { tx: TxEvent }) {
   useSim((s) => s.version);
   const setSelection = useSim((s) => s.setSelection);
@@ -101,6 +155,10 @@ export function PacketInspector({ packetId }: { packetId: string }) {
         {summarizeFrame(tx.frame.eth)}
       </div>
       <div className="story">{explainPacket(tx, sim.explainCtx).say}</div>
+      <h4>
+        Packet anatomy <Q id="mtu" />
+      </h4>
+      <Anatomy tx={tx} fields={enc.fields} />
       <ConceptCard id="encapsulation" title="Why does a packet have layers?" />
       <table className="tbl wrap">
         <tbody>

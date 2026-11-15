@@ -7,23 +7,27 @@ import type { Engine } from '../core/Engine';
 import type { ScheduledEvent } from '../core/EventQueue';
 import { MS, SEC } from '../core/time';
 import type { Frame } from '../model/frame';
-import { BROADCAST_MAC, broadcastOf, inSubnet, isGroupMac, LIMITED_BROADCAST, networkOf, type Ipv4 } from '../protocols/addr';
+import { BROADCAST_MAC, broadcastOf, bytesToIp, inSubnet, isGroupMac, LIMITED_BROADCAST, networkOf, type Ipv4 } from '../protocols/addr';
 import { hex } from '../protocols/bytes';
-import { DEFAULT_PING_DATA, makeEcho } from '../protocols/icmp';
-import { DEFAULT_TTL, ipv4HeaderValid, makeIpv4 } from '../protocols/ipv4';
+import { DEFAULT_PING_DATA, makeEcho, makeIcmpError } from '../protocols/icmp';
+import { DEFAULT_TTL, encodeIpv4Datagram, ipv4HeaderValid, isFragment, makeIpv4 } from '../protocols/ipv4';
 import {
   ETHERTYPE_IPV4,
   ICMP_DEST_UNREACHABLE,
   ICMP_ECHO_REPLY,
   ICMP_ECHO_REQUEST,
   ICMP_TIME_EXCEEDED,
+  ICMP_TIMX_REASS,
+  ICMP_UNREACH_NEEDFRAG,
   IPPROTO_ICMP,
+  IPV4_FLAG_DF,
   isIcmpEcho,
   isIcmpError,
   type IcmpError,
   type Ipv4Packet,
 } from '../protocols/types';
 import { ArpResolver, type ArpConfig } from './ArpResolver';
+import { ipOutput, Reassembler } from './ipOutput';
 import { Device, type Port, type PortInit, type SendMeta } from './Device';
 import { DEFAULT_ARP_CONFIG } from './Router';
 import type { HostState } from './state';
@@ -36,7 +40,18 @@ export interface PingOptions {
   ttl?: number;
   /** ICMP payload size in bytes. */
   size?: number;
+  /** Set Don't Fragment (like `ping -M do` / `ping -f -l` on Windows). */
+  df?: boolean;
 }
+
+export interface MtrOptions {
+  rounds?: number;
+  maxHops?: number;
+  timeoutNs?: number;
+}
+
+/** RFC 1191 6.3: learned PMTU estimates are aged out (after 10 minutes). */
+const PMTU_AGE_NS = 600 * SEC;
 
 export interface TracerouteOptions {
   maxHops?: number;
@@ -45,11 +60,19 @@ export interface TracerouteOptions {
 }
 
 const UNREACH_TEXT: Record<number, string> = {
+  4: 'Frag needed and DF set',
   0: 'Destination Net Unreachable',
   1: 'Destination Host Unreachable',
   2: 'Destination Protocol Unreachable',
   3: 'Destination Port Unreachable',
 };
+
+function icmpErrorText(err: IcmpError): string {
+  if (err.type === ICMP_TIME_EXCEEDED) return err.code === ICMP_TIMX_REASS ? 'Fragment reassembly time exceeded' : 'Time to live exceeded';
+  if (err.type === ICMP_DEST_UNREACHABLE && err.code === ICMP_UNREACH_NEEDFRAG) return `Frag needed and DF set (mtu = ${err.unused & 0xffff})`;
+  if (err.type === ICMP_DEST_UNREACHABLE) return UNREACH_TEXT[err.code] ?? `Unreachable code ${err.code}`;
+  return `ICMP type ${err.type}`;
+}
 
 function fmtMs(ns: number): string {
   return `${(ns / MS).toFixed(3)} ms`;
@@ -57,7 +80,7 @@ function fmtMs(ns: number): string {
 
 interface Session {
   readonly id: string;
-  readonly app: 'ping' | 'traceroute';
+  readonly app: 'ping' | 'traceroute' | 'pmtud' | 'mtr';
   readonly identifier: number;
   readonly dst: Ipv4;
   done: boolean;
@@ -74,6 +97,8 @@ export class Host extends Device {
   private sessions = new Map<string, Session>();
   private byIdent = new Map<number, Session>();
   private sessionCounter = 0;
+  private pmtu = new Map<Ipv4, { mtu: number; expiresAt: number }>();
+  private reasm: Reassembler;
 
   constructor(
     engine: Engine,
@@ -88,6 +113,24 @@ export class Host extends Device {
       for (const q of dropped) this.notifyLocalFail(q.packet, `Destination Host Unreachable (no ARP reply from ${ip})`);
     });
     this.ipId = engine.rng.int(0, 0xffff);
+    this.reasm = new Reassembler(this, (first) => {
+      // RFC 1122 3.3.2: report a timed-out reassembly to the sender if fragment 0 arrived.
+      if (!first || !this.ip) return;
+      const err = makeIcmpError(ICMP_TIME_EXCEEDED, ICMP_TIMX_REASS, encodeIpv4Datagram(first));
+      this.sendIp(makeIpv4({ src: this.ip, dst: first.src, protocol: IPPROTO_ICMP, identification: this.nextIpId(), payload: err }), { flowId: this.engine.newFlowId() });
+    });
+  }
+
+  /** Effective MTU towards `dst`: the NIC's MTU, lowered by any learned path MTU. */
+  pathMtu(dst: Ipv4, port = this.nic): number {
+    const base = port?.mtu ?? 1500;
+    const e = this.pmtu.get(dst);
+    if (!e) return base;
+    if (e.expiresAt <= this.engine.now) {
+      this.pmtu.delete(dst);
+      return base;
+    }
+    return Math.min(base, e.mtu);
   }
 
   /** The host's addressed NIC (first interface with an IP). */
@@ -133,7 +176,11 @@ export class Host extends Device {
       this.drop('no-gateway', `${this.name} cannot reach ${packet.dst}: not on-link and no default gateway`, { flowId: meta.flowId });
       return 'Network is unreachable (no default gateway)';
     }
-    this.arp.sendIpv4(port, nextHop, packet, meta);
+    const mtu = this.pathMtu(packet.dst, port);
+    if (ipOutput(this, this.arp, port, nextHop, packet, meta, mtu) === 'too-big') {
+      this.drop('too-big', `${this.name} won't send a ${packet.totalLength}-byte packet with DF set: the MTU towards ${packet.dst} is ${mtu}`, { flowId: meta.flowId });
+      return `Message too long (mtu = ${mtu})`;
+    }
     return null;
   }
 
@@ -164,6 +211,18 @@ export class Host extends Device {
       this.drop('not-for-me', `${this.name} dropped packet for ${p.dst}: not its address (hosts do not forward)`, { iface: port.id, ...meta });
       return;
     }
+    if (isFragment(p)) {
+      const whole = this.reasm.add(p, frame);
+      if (!whole) return;
+      this.handleIp(port, whole, frame, isBcast);
+      return;
+    }
+    this.handleIp(port, p, frame, isBcast);
+  }
+
+  private handleIp(port: Port, p: Ipv4Packet, frame: Frame, isBcast: boolean): void {
+    const meta = { packetId: frame.id, flowId: frame.flowId };
+    const mine = port.ip?.addr;
     const m = p.payload;
     if (m.kind !== 'icmp') {
       this.drop('unsupported', `${this.name} has no handler for IP protocol ${p.protocol}`, { iface: port.id, ...meta });
@@ -190,6 +249,16 @@ export class Host extends Device {
       // The quoted datagram identifies which of our probes this is about.
       const o = m.original;
       const ihl = ((o[0] ?? 0) & 0x0f) * 4;
+      if (m.type === ICMP_DEST_UNREACHABLE && m.code === ICMP_UNREACH_NEEDFRAG && o.length >= 20) {
+        // RFC 1191: remember the smaller path MTU for that destination.
+        const dst = bytesToIp(o, 16);
+        const mtu = m.unused & 0xffff;
+        if (mtu >= 68 && mtu < this.pathMtu(dst)) {
+          const had = this.pmtu.has(dst);
+          this.pmtu.set(dst, { mtu, expiresAt: this.engine.now + PMTU_AGE_NS });
+          this.table('pmtu', had ? 'update' : 'add', dst, `${this.name} learned path MTU to ${dst} is ${mtu} (from ${p.src})`, meta);
+        }
+      }
       if (o.length >= ihl + 8 && o[9] === IPPROTO_ICMP && o[ihl] === ICMP_ECHO_REQUEST) {
         const ident = (o[ihl + 4]! << 8) | o[ihl + 5]!;
         const seq = (o[ihl + 6]! << 8) | o[ihl + 7]!;
@@ -233,10 +302,10 @@ export class Host extends Device {
   }
 
   /** Build and send one echo request; returns flowId, or null on local failure. */
-  sendEcho(s: Session, seq: number, ttl: number, data: Uint8Array): string | null {
+  sendEcho(s: Session, seq: number, ttl: number, data: Uint8Array, df = false): string | null {
     const src = this.ip;
     if (!src) return null;
-    const pkt = makeIpv4({ src, dst: s.dst, ttl, protocol: IPPROTO_ICMP, identification: this.nextIpId(), payload: makeEcho(ICMP_ECHO_REQUEST, s.identifier, seq, data) });
+    const pkt = makeIpv4({ src, dst: s.dst, ttl, protocol: IPPROTO_ICMP, identification: this.nextIpId(), flags: df ? IPV4_FLAG_DF : 0, payload: makeEcho(ICMP_ECHO_REQUEST, s.identifier, seq, data) });
     const flowId = this.engine.newFlowId();
     const err = this.sendIp(pkt, { flowId });
     if (err) {
@@ -248,6 +317,20 @@ export class Host extends Device {
 
   startPing(dst: Ipv4, opts: PingOptions = {}): string {
     const s = new PingSession(this, this.nextSessionId('ping'), this.newIdentifier(), dst, opts);
+    this.register(s);
+    s.start();
+    return s.id;
+  }
+
+  startPmtud(dst: Ipv4): string {
+    const s = new PmtudSession(this, this.nextSessionId('pmtud'), this.newIdentifier(), dst);
+    this.register(s);
+    s.start();
+    return s.id;
+  }
+
+  startMtr(dst: Ipv4, opts: MtrOptions = {}): string {
+    const s = new MtrSession(this, this.nextSessionId('mtr'), this.newIdentifier(), dst, opts);
     this.register(s);
     s.start();
     return s.id;
@@ -268,6 +351,7 @@ export class Host extends Device {
       gateway: this.gateway,
       ports: portViews(this),
       arp: this.arp.rows(),
+      pmtu: [...this.pmtu.entries()].filter(([, e]) => e.expiresAt > this.engine.now).map(([dst, e]) => ({ dst, mtu: e.mtu, expiresIn: e.expiresAt - this.engine.now })),
       sessions: [...this.sessions.values()].map((s) => ({ id: s.id, app: s.app, dst: s.dst, done: s.done, lines: [...s.lines] })),
     };
   }
@@ -286,6 +370,7 @@ class PingSession implements Session {
   private readonly timeout: number;
   private readonly ttl: number;
   private readonly data: Uint8Array;
+  private readonly df: boolean;
   private rtts: number[] = [];
 
   constructor(
@@ -299,11 +384,12 @@ class PingSession implements Session {
     this.interval = o.intervalNs ?? 1 * SEC;
     this.timeout = o.timeoutNs ?? 2 * SEC;
     this.ttl = o.ttl ?? DEFAULT_TTL;
+    this.df = o.df ?? false;
     this.data = o.size === undefined ? DEFAULT_PING_DATA : Uint8Array.from({ length: o.size }, (_, i) => DEFAULT_PING_DATA[i % DEFAULT_PING_DATA.length]!);
   }
 
   start(): void {
-    this.host.appLine(this, 'start', `PING ${this.dst}: ${this.data.length} data bytes, ttl ${this.ttl}`);
+    this.host.appLine(this, 'start', `PING ${this.dst}: ${this.data.length} data bytes (${this.data.length + 28}-byte packets), ttl ${this.ttl}${this.df ? ', DF set' : ''}`);
     this.sendNext();
   }
 
@@ -313,7 +399,7 @@ class PingSession implements Session {
     const engine = this.host.engine;
     const timer = engine.schedule(this.timeout, `${this.host.name} ping timeout seq=${seq}`, () => this.onTimeout(seq), this.host.id);
     this.outstanding.set(seq, { sentAt: engine.now, timer });
-    const flowId = this.host.sendEcho(this, seq, this.ttl, this.data);
+    const flowId = this.host.sendEcho(this, seq, this.ttl, this.data, this.df);
     if (flowId) this.host.appLine(this, 'sent', `ping ${this.dst} icmp_seq=${seq}`, { flowId });
     if (this.sent < this.count) engine.schedule(this.interval, `${this.host.name} ping next`, () => this.sendNext(), this.host.id);
   }
@@ -343,7 +429,7 @@ class PingSession implements Session {
   onError(seq: number, from: Ipv4, err: IcmpError, frame: Frame): void {
     if (!this.settle(seq)) return;
     this.errors++;
-    const what = err.type === ICMP_TIME_EXCEEDED ? 'Time to live exceeded' : err.type === ICMP_DEST_UNREACHABLE ? (UNREACH_TEXT[err.code] ?? `Unreachable code ${err.code}`) : `ICMP type ${err.type}`;
+    const what = icmpErrorText(err);
     this.host.appLine(this, 'error', `From ${from} icmp_seq=${seq} ${what}`, { packetId: frame.id, flowId: frame.flowId });
     this.maybeFinish();
   }
@@ -481,5 +567,226 @@ class TracerouteSession implements Session {
     this.results = [];
     this.hopAddr = null;
     this.sendProbe();
+  }
+}
+
+/**
+ * Path-MTU discovery, tracepath-style: send DF-set echo requests as big as the local MTU;
+ * every "Fragmentation Needed" names a smaller next-hop MTU, so retry at that size until an
+ * echo reply proves the whole path carries it (RFC 1191).
+ */
+class PmtudSession implements Session {
+  readonly app = 'pmtud' as const;
+  done = false;
+  lines: string[] = [];
+  private size: number;
+  private seq = 0;
+  private current?: { seq: number; timer: ScheduledEvent };
+  private tries = 0;
+
+  constructor(
+    private host: Host,
+    readonly id: string,
+    readonly identifier: number,
+    readonly dst: Ipv4,
+  ) {
+    this.size = host.nic?.mtu ?? 1500;
+  }
+
+  start(): void {
+    this.host.appLine(this, 'start', `PMTUD to ${this.dst}: probing with DF set, starting at my MTU ${this.size}`);
+    this.probe();
+  }
+
+  private probe(): void {
+    if (++this.tries > 8) return this.finish(`gave up after ${this.tries - 1} probes`);
+    const seq = ++this.seq;
+    const timer = this.host.engine.schedule(2 * SEC, `${this.host.name} pmtud timeout`, () => this.onTimeout(seq), this.host.id);
+    this.current = { seq, timer };
+    const data = Uint8Array.from({ length: this.size - 28 }, (_, i) => DEFAULT_PING_DATA[i % DEFAULT_PING_DATA.length]!);
+    this.host.appLine(this, 'hop', `probe ${this.size} bytes (DF)`);
+    this.host.sendEcho(this, seq, DEFAULT_TTL, data, true);
+  }
+
+  private take(seq: number): boolean {
+    if (!this.current || this.current.seq !== seq) return false;
+    this.current.timer.cancelled = true;
+    this.current = undefined;
+    return true;
+  }
+
+  onReply(seq: number, ip: Ipv4Packet): void {
+    if (!this.take(seq)) return;
+    this.host.appLine(this, 'reply', `${this.size} bytes reached ${ip.src} without fragmentation`);
+    this.finish(`path MTU to ${this.dst} = ${this.size}`);
+  }
+
+  onError(seq: number, from: Ipv4, err: IcmpError): void {
+    if (!this.take(seq)) return;
+    if (err.type === ICMP_DEST_UNREACHABLE && err.code === ICMP_UNREACH_NEEDFRAG) {
+      const mtu = err.unused & 0xffff;
+      this.host.appLine(this, 'error', `${from} says: too big, next-hop MTU ${mtu}`);
+      if (mtu >= 68 && mtu < this.size) {
+        this.size = mtu;
+        this.probe();
+        return;
+      }
+    } else {
+      this.host.appLine(this, 'error', `From ${from}: ${icmpErrorText(err)}`);
+    }
+    this.finish(`stopped at ${this.size} bytes`);
+  }
+
+  onLocalFail(seq: number, reason: string): void {
+    if (!this.take(seq)) return;
+    const m = /mtu = (\d+)/.exec(reason);
+    if (m && Number(m[1]) < this.size) {
+      this.size = Number(m[1]);
+      this.host.appLine(this, 'error', `already known: path MTU is at most ${this.size}`);
+      this.probe();
+      return;
+    }
+    this.host.appLine(this, 'error', reason);
+    this.finish(`stopped at ${this.size} bytes`);
+  }
+
+  private onTimeout(seq: number): void {
+    if (!this.current || this.current.seq !== seq) return;
+    this.current = undefined;
+    this.host.appLine(this, 'timeout', `no answer to the ${this.size}-byte probe`);
+    this.finish(`no reply: path MTU unknown (≤ ${this.size})`);
+  }
+
+  private finish(text: string): void {
+    if (this.done) return;
+    this.done = true;
+    this.host.appLine(this, 'done', text);
+  }
+}
+
+interface HopStat {
+  addr: Ipv4 | null;
+  sent: number;
+  recv: number;
+  rtts: number[];
+}
+
+/**
+ * MTR ("my traceroute"): traceroute repeated in rounds, one probe per hop per round, then a
+ * per-hop table of loss and latency. Loss at an intermediate hop that does not continue to
+ * later hops usually means that router rate-limits ICMP, not real packet loss.
+ */
+class MtrSession implements Session {
+  readonly app = 'mtr' as const;
+  done = false;
+  lines: string[] = [];
+  private round = 0;
+  private ttl = 1;
+  private seq = 0;
+  private lastHop: number;
+  private stats: HopStat[] = [];
+  private current?: { seq: number; sentAt: number; timer: ScheduledEvent };
+  private readonly rounds: number;
+  private readonly timeout: number;
+
+  constructor(
+    private host: Host,
+    readonly id: string,
+    readonly identifier: number,
+    readonly dst: Ipv4,
+    o: MtrOptions,
+  ) {
+    this.rounds = o.rounds ?? 5;
+    this.lastHop = o.maxHops ?? 30;
+    this.timeout = o.timeoutNs ?? 1 * SEC;
+  }
+
+  start(): void {
+    this.host.appLine(this, 'start', `mtr to ${this.dst}: ${this.rounds} rounds, one probe per hop per round`);
+    this.round = 1;
+    this.send();
+  }
+
+  private stat(ttl: number): HopStat {
+    return (this.stats[ttl - 1] ??= { addr: null, sent: 0, recv: 0, rtts: [] });
+  }
+
+  private send(): void {
+    const seq = ++this.seq;
+    const engine = this.host.engine;
+    const timer = engine.schedule(this.timeout, `${this.host.name} mtr timeout`, () => this.onTimeout(seq), this.host.id);
+    this.current = { seq, sentAt: engine.now, timer };
+    this.stat(this.ttl).sent++;
+    this.host.sendEcho(this, seq, this.ttl, DEFAULT_PING_DATA);
+  }
+
+  private take(seq: number): number | undefined {
+    if (!this.current || this.current.seq !== seq) return undefined;
+    this.current.timer.cancelled = true;
+    const rtt = this.host.engine.now - this.current.sentAt;
+    this.current = undefined;
+    return rtt;
+  }
+
+  private record(rtt: number, from: Ipv4, final: boolean): void {
+    const h = this.stat(this.ttl);
+    h.addr ??= from;
+    h.recv++;
+    h.rtts.push(rtt);
+    if (final) this.lastHop = Math.min(this.lastHop, this.ttl);
+    this.next();
+  }
+
+  onReply(seq: number, ip: Ipv4Packet): void {
+    const rtt = this.take(seq);
+    if (rtt !== undefined) this.record(rtt, ip.src, true);
+  }
+
+  onError(seq: number, from: Ipv4, err: IcmpError): void {
+    const rtt = this.take(seq);
+    if (rtt === undefined) return;
+    this.record(rtt, from, err.type === ICMP_DEST_UNREACHABLE);
+  }
+
+  onLocalFail(seq: number, reason: string): void {
+    if (this.take(seq) === undefined) return;
+    this.host.appLine(this, 'error', reason);
+    this.lastHop = Math.min(this.lastHop, this.ttl);
+    this.next();
+  }
+
+  private onTimeout(seq: number): void {
+    if (!this.current || this.current.seq !== seq) return;
+    this.current = undefined;
+    this.next();
+  }
+
+  private next(): void {
+    if (this.ttl < this.lastHop) {
+      this.ttl++;
+      this.send();
+      return;
+    }
+    this.host.appLine(this, 'hop', `round ${this.round}/${this.rounds} done`);
+    if (this.round >= this.rounds) {
+      this.report();
+      return;
+    }
+    this.round++;
+    this.ttl = 1;
+    this.host.engine.schedule(200 * MS, `${this.host.name} mtr next round`, () => this.send(), this.host.id);
+  }
+
+  private report(): void {
+    this.done = true;
+    this.host.appLine(this, 'hop', 'HOST                 Loss%  Snt   Avg   Best  Wrst');
+    this.stats.slice(0, this.lastHop).forEach((h, i) => {
+      const loss = h.sent ? ((h.sent - h.recv) / h.sent) * 100 : 0;
+      const ms = (v: number) => (v / MS).toFixed(1).padStart(5);
+      const avg = h.rtts.length ? h.rtts.reduce((a, b) => a + b, 0) / h.rtts.length : 0;
+      const row = h.rtts.length ? `${ms(avg)} ${ms(Math.min(...h.rtts))} ${ms(Math.max(...h.rtts))}` : '    -     -     -';
+      this.host.appLine(this, 'hop', `${String(i + 1).padStart(2)}. ${(h.addr ?? '???').padEnd(16)} ${loss.toFixed(1).padStart(5)}% ${String(h.sent).padStart(4)} ${row}`);
+    });
+    this.host.appLine(this, 'done', `mtr to ${this.dst} complete`);
   }
 }

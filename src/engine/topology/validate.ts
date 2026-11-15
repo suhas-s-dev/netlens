@@ -71,6 +71,8 @@ export function validateTopology(topo: TopologyJson): ValidationIssue[] {
     const ifaceIds = new Set<string>();
     n.interfaces.forEach((i, k) => {
       if (ifaceIds.has(i.id)) err(`${n.name}: duplicate interface "${i.id}"`, { node: n.id, iface: i.id });
+      if (i.mtu !== undefined && (!Number.isInteger(i.mtu) || i.mtu < 68 || i.mtu > 9216))
+        err(`${n.name} ${i.id}: MTU must be a whole number from 68 (RFC 791 minimum) to 9216 (jumbo)`, { node: n.id, iface: i.id });
       ifaceIds.add(i.id);
       const mac = (i.mac ?? generatedMac(idx, k)).toLowerCase();
       if (!isValidMac(mac)) err(`${n.name} ${i.id}: invalid MAC "${i.mac}"`, { node: n.id, iface: i.id });
@@ -124,6 +126,15 @@ export function validateTopology(topo: TopologyJson): ValidationIssue[] {
     if (l.a.node === l.b.node) err(`Link ${l.id} connects ${l.a.node} to itself`, { link: l.id });
     if ((l.latencyMs ?? 1) < 0) err(`Link ${l.id}: latency must be ≥ 0`, { link: l.id });
     if ((l.bandwidthMbps ?? 1) <= 0) err(`Link ${l.id}: bandwidth must be > 0`, { link: l.id });
+    if (l.lossPercent !== undefined && (l.lossPercent < 0 || l.lossPercent > 100)) err(`Link ${l.id}: loss must be between 0 and 100 %`, { link: l.id });
+    const mtuOf = (e: { node: string; iface: string }) => {
+      const n = topo.nodes.find((x) => x.id === e.node);
+      return n?.type === 'switch' ? undefined : (n?.interfaces.find((i) => i.id === e.iface)?.mtu ?? 1500);
+    };
+    const ma = mtuOf(l.a);
+    const mb = mtuOf(l.b);
+    if (ma !== undefined && mb !== undefined && ma !== mb)
+      warn(`Link ${l.id}: MTU mismatch (${ma} vs ${mb}). Big packets will only be dropped in one direction`, { link: l.id });
   }
 
   // --- subnets: per router, and across L2 segments

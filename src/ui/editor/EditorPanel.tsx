@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { DEFAULT_LINK_BANDWIDTH_MBPS, DEFAULT_LINK_LATENCY_MS, validateTopology, type HostJson, type NodeJson, type RouterJson, type TopologyJson, type ValidationIssue } from '../../engine';
 
-import { addInterface, emptyTopology, isLinked, removeInterface, removeLink, removeNode, setInterfaceIp, updateLink, updateNode } from '../../state/editOps';
+import { addInterface, emptyTopology, isLinked, removeInterface, removeLink, removeNode, setInterfaceIp, setInterfaceMtu, updateLink, updateNode } from '../../state/editOps';
 import { sim, useSim } from '../../state/sim';
 
 function useIssues(): ValidationIssue[] {
@@ -92,6 +92,16 @@ function NodeEditor({ node, issues }: { node: NodeJson; issues: ValidationIssue[
               }
             />
             <FieldIssues issues={mine.filter((i) => !i.iface && /gateway/i.test(i.message))} />
+            <label htmlFor="ed-mtu">MTU</label>
+            <input
+              id="ed-mtu"
+              type="number"
+              min={68}
+              max={9216}
+              placeholder="1500"
+              value={node.interfaces[0]?.mtu ?? ''}
+              onChange={(e) => edit((t) => setInterfaceMtu(t, node.id, node.interfaces[0]!.id, e.target.value))}
+            />
             <label>MAC</label>
             <span className="hint" style={{ fontFamily: 'var(--mono)' }}>
               {node.interfaces[0]?.mac}
@@ -133,6 +143,11 @@ function NodeEditor({ node, issues }: { node: NodeJson; issues: ValidationIssue[
                         <span className="dim">{i.mac}</span>
                       )}
                     </td>
+                    {node.type === 'router' && (
+                      <td style={{ width: 64 }}>
+                        <input type="number" min={68} max={9216} placeholder="1500" title="MTU" aria-label={`${i.id} MTU`} value={i.mtu ?? ''} onChange={(e) => edit((t) => setInterfaceMtu(t, node.id, i.id, e.target.value))} style={{ width: '100%' }} />
+                      </td>
+                    )}
                     <td style={{ width: 70 }}>{linked ? <span className="pill">linked</span> : <button className="btn" onClick={() => setLinkStart({ node: node.id, iface: i.id })} title="Pick this port, then click another device's port">Link…</button>}</td>
                     <td style={{ width: 30 }}>
                       <button className="btn icon danger" disabled={node.interfaces.length <= 1} onClick={() => edit((t) => removeInterface(t, node.id, i.id))} aria-label={`Remove ${i.id}`}>
@@ -239,6 +254,8 @@ function LinkEditor({ linkId }: { linkId: string }) {
         <input id="ed-lat" type="number" min={0} step={0.5} placeholder={String(DEFAULT_LINK_LATENCY_MS)} value={l.latencyMs ?? ''} onChange={(e) => edit((t) => updateLink(t, l.id, { latencyMs: num(e.target.value) }))} />
         <label htmlFor="ed-bw">Bandwidth (Mb/s)</label>
         <input id="ed-bw" type="number" min={0.01} step={1} placeholder={String(DEFAULT_LINK_BANDWIDTH_MBPS)} value={l.bandwidthMbps ?? ''} onChange={(e) => edit((t) => updateLink(t, l.id, { bandwidthMbps: num(e.target.value) || undefined }))} />
+        <label htmlFor="ed-loss">Loss (%)</label>
+        <input id="ed-loss" type="number" min={0} max={100} step={1} placeholder="0" value={l.lossPercent ?? ''} onChange={(e) => edit((t) => updateLink(t, l.id, { lossPercent: num(e.target.value) || undefined }))} />
       </div>
       <div className="hint">Lower bandwidth makes serialization visible: big frames become long streaks and queue behind each other.</div>
     </div>

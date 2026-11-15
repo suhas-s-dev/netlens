@@ -160,6 +160,7 @@ function Ports({ st }: { st: DeviceState }) {
           <th>{st.kind === 'switch' ? 'Port' : 'If'}</th>
           <th>MAC</th>
           {st.kind !== 'switch' && <th>IP</th>}
+          {st.kind !== 'switch' && <th title="Largest IP packet this interface sends without fragmenting">MTU</th>}
           <th>Peer</th>
         </tr>
       </thead>
@@ -169,6 +170,7 @@ function Ports({ st }: { st: DeviceState }) {
             <td>{p.id}</td>
             <td>{p.mac}</td>
             {st.kind !== 'switch' && <td>{p.ip ?? '—'}</td>}
+            {st.kind !== 'switch' && <td className={p.mtu !== 1500 ? '' : 'dim'}>{p.mtu}</td>}
             <td>
               {peerOf(p.linkId, p.id) ?? <span className="dim">not connected</span>}
               {p.queued > 0 && <span className="pill"> {p.queued} queued</span>}
@@ -249,6 +251,31 @@ export function DevicePanel({ nodeId }: { nodeId: string }) {
             ARP cache <Q id="arp-cache" />
           </h4>
           <ArpTable nodeId={nodeId} rows={st.arp} showIface={false} />
+          {st.pmtu.length > 0 && (
+            <>
+              <h4>
+                Path MTU cache <Q id="pmtud" />
+              </h4>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Destination</th>
+                    <th>Path MTU</th>
+                    <th>Expires</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {st.pmtu.map((r) => (
+                    <tr key={r.dst} className="hl-add">
+                      <td>{r.dst}</td>
+                      <td>{r.mtu}</td>
+                      <td className="dim">{formatDuration(r.expiresIn)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
           {st.sessions.length > 0 && (
             <>
               <h4>Terminal</h4>
@@ -258,7 +285,7 @@ export function DevicePanel({ nodeId }: { nodeId: string }) {
                 {st.sessions.map((s) => (
                   <div key={s.id}>
                     {s.lines.map((l, i) => (
-                      <div key={i} className={/Unreachable|timeout|exceeded|!H|!N/.test(l) ? 'err' : /bytes from|complete/.test(l) ? 'ok' : ''}>
+                      <div key={i} className={/Unreachable|timeout|exceeded|!H|!N|Frag needed|too long|too big/.test(l) ? 'err' : /bytes from|complete|path MTU .* = /.test(l) ? 'ok' : ''}>
                         {l}
                       </div>
                     ))}

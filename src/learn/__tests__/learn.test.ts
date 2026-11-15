@@ -3,6 +3,7 @@ import { Engine, SEC, type TopologyJson, type TraceEvent, type TxEvent } from '.
 import routerChain from '../../presets/router-chain.json';
 import singleLan from '../../presets/single-lan.json';
 import twoLans from '../../presets/two-lans.json';
+import mtuBottleneck from '../../presets/mtu-bottleneck.json';
 import { CONCEPT_LIST, CONCEPTS } from '../concepts';
 import { buildCtx, explain, explainPacket } from '../explain';
 import { LESSONS } from '../lessons';
@@ -11,6 +12,7 @@ const presets: [string, TopologyJson][] = [
   ['single-lan', singleLan as TopologyJson],
   ['two-lans', twoLans as TopologyJson],
   ['router-chain', routerChain as TopologyJson],
+  ['mtu-bottleneck', mtuBottleneck as TopologyJson],
 ];
 
 function run(t: TopologyJson) {
@@ -21,7 +23,7 @@ function run(t: TopologyJson) {
     events.push(e);
     if (e.type === 'tx') packets.set(e.packetId!, e);
   });
-  engine.runUntil(20 * SEC);
+  engine.runUntil(t.name === 'MTU bottleneck' ? 14 * SEC : 20 * SEC);
   return { events, ctx: buildCtx(t, packets) };
 }
 
@@ -45,6 +47,7 @@ describe.each(presets)('explanations for %s', (_, topo) => {
 
   it('every packet gets a story with device names', () => {
     for (const e of events) if (e.type === 'tx') expect(explainPacket(e, ctx).say).toMatch(/[HRS]W?\d/);
+    for (const e of events) if (e.type === 'tx') expect(explainPacket(e, ctx).say).not.toMatch(/undefined|NaN/);
   });
 });
 

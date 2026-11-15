@@ -368,8 +368,16 @@ export class SimController {
 
   // ---- commands (all user actions go through here)
 
-  ping(hostId: string, dst: string, count = 4): void {
-    this.command(() => this.engine.ping(hostId, dst, { count }));
+  ping(hostId: string, dst: string, count = 4, extra: { size?: number; df?: boolean } = {}): void {
+    this.command(() => this.engine.ping(hostId, dst, { count, ...extra }));
+  }
+
+  pmtud(hostId: string, dst: string): void {
+    this.command(() => this.engine.pmtud(hostId, dst));
+  }
+
+  mtr(hostId: string, dst: string, rounds = 5): void {
+    this.command(() => this.engine.mtr(hostId, dst, { rounds }));
   }
 
   traceroute(hostId: string, dst: string): void {

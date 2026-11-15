@@ -71,7 +71,10 @@ export const ICMP_UNREACH_NET = 0;
 export const ICMP_UNREACH_HOST = 1;
 export const ICMP_UNREACH_PROTOCOL = 2;
 export const ICMP_UNREACH_PORT = 3;
+/** RFC 1191: "fragmentation needed and DF set"; the low 16 bits of the unused word carry the next-hop MTU. */
+export const ICMP_UNREACH_NEEDFRAG = 4;
 export const ICMP_TIMX_INTRANS = 0; // TTL exceeded in transit
+export const ICMP_TIMX_REASS = 1; // fragment reassembly time exceeded
 
 export interface IcmpEcho {
   kind: 'icmp';

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "name": "MTU bottleneck",
+  "description": "Two LANs joined by a WAN link whose MTU is only 1400 bytes. Watch a 4404-byte ping get fragmented twice and reassembled, a DF ping bounce back with 'Fragmentation Needed', path-MTU discovery, and an MTR report.",
+  "seed": 1,
+  "nodes": [
+    { "id": "h1", "name": "H1", "type": "host", "position": { "x": -12, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.10/24" }], "gateway": "10.0.1.1" },
+    { "id": "r1", "name": "R1", "type": "router", "position": { "x": -4, "y": 0 },
+      "interfaces": [{ "id": "eth0", "ip": "10.0.1.1/24" }, { "id": "eth1", "ip": "10.0.12.1/30", "mtu": 1400 }],
+      "staticRoutes": [{ "prefix": "0.0.0.0/0", "nextHop": "10.0.12.2" }] },
+    { "id": "r2", "name": "R2", "type": "router", "position": { "x": 4, "y": 0 },
+      "interfaces": [{ "id": "eth0", "ip": "10.0.12.2/30", "mtu": 1400 }, { "id": "eth1", "ip": "10.0.2.1/24" }],
+      "staticRoutes": [{ "prefix": "0.0.0.0/0", "nextHop": "10.0.12.1" }] },
+    { "id": "h2", "name": "H2", "type": "host", "position": { "x": 12, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.2.20/24" }], "gateway": "10.0.2.1" }
+  ],
+  "links": [
+    { "id": "l1", "a": { "node": "h1", "iface": "eth0" }, "b": { "node": "r1", "iface": "eth0" } },
+    { "id": "l2", "a": { "node": "r1", "iface": "eth1" }, "b": { "node": "r2", "iface": "eth0" }, "latencyMs": 4 },
+    { "id": "l3", "a": { "node": "r2", "iface": "eth1" }, "b": { "node": "h2", "iface": "eth0" } }
+  ],
+  "scenario": [
+    { "at": 0, "action": "ping", "node": "h1", "dst": "10.0.2.20", "count": 1, "size": 4376 },
+    { "at": 2000, "action": "ping", "node": "h1", "dst": "10.0.2.20", "count": 1, "size": 1472, "df": true },
+    { "at": 3000, "action": "pmtud", "node": "h2", "dst": "10.0.1.10" },
+    { "at": 5000, "action": "mtr", "node": "h1", "dst": "10.0.2.20", "rounds": 3 }
+  ]
+}

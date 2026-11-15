@@ -17,7 +17,9 @@ import {
   ICMP_TIME_EXCEEDED,
   ICMP_TIMX_INTRANS,
   ICMP_UNREACH_HOST,
+  ICMP_UNREACH_NEEDFRAG,
   ICMP_UNREACH_NET,
+  ICMP_TIMX_REASS,
   IPPROTO_ICMP,
   isIcmpEcho,
   isIcmpError,
@@ -25,17 +27,20 @@ import {
 } from '../protocols/types';
 import { ArpResolver, type ArpConfig, type QueuedPacket } from './ArpResolver';
 import { Device, type Port, type PortInit, type SendMeta } from './Device';
+import { ipOutput, Reassembler } from './ipOutput';
+import { isFragment } from '../protocols/ipv4';
 import { buildRoutingTable, cidr, longestPrefixMatch, type Route, type StaticRouteSpec } from './routing';
 import type { RouterState } from './state';
 import { portViews } from './Switch';
 
-export const DEFAULT_ARP_CONFIG: ArpConfig = { timeoutNs: 60 * SEC, retryNs: 1 * SEC, maxAttempts: 3, maxQueue: 3 };
+export const DEFAULT_ARP_CONFIG: ArpConfig = { timeoutNs: 60 * SEC, retryNs: 1 * SEC, maxAttempts: 3, maxQueue: 10 };
 
 export class Router extends Device {
   readonly kind = 'router' as const;
   readonly routes: Route[];
   readonly arp: ArpResolver;
   private ipId: number;
+  private reasm: Reassembler;
 
   constructor(engine: Engine, id: string, name: string, ports: PortInit[], statics: StaticRouteSpec[], arpConfig: ArpConfig = DEFAULT_ARP_CONFIG) {
     super(engine, id, name, ports);
@@ -45,6 +50,9 @@ export class Router extends Device {
     );
     this.arp = new ArpResolver(this, arpConfig, (port, ip, dropped) => this.onArpFailed(port, ip, dropped));
     this.ipId = engine.rng.int(0, 0xffff);
+    this.reasm = new Reassembler(this, (first) => {
+      if (first) this.sendIcmpError(first, ICMP_TIME_EXCEEDED, ICMP_TIMX_REASS);
+    });
   }
 
   receive(port: Port, frame: Frame): void {
@@ -104,10 +112,10 @@ export class Router extends Device {
     }
     const fwd = withTtl(ip, ip.ttl - 1);
     this.decision('ttl', `${this.name} TTL ${ip.ttl} → ${fwd.ttl}, header checksum ${hex(ip.checksum, 4)} → ${hex(fwd.checksum, 4)}`, meta);
-    this.forward(fwd, best, { flowId: frame.flowId, parentId: frame.id });
+    this.forward(fwd, best, { flowId: frame.flowId, parentId: frame.id }, frame);
   }
 
-  private forward(packet: Ipv4Packet, route: Route, meta: SendMeta): void {
+  private forward(packet: Ipv4Packet, route: Route, meta: SendMeta, frame?: Frame): void {
     const out = this.ports.get(route.iface)!;
     const nextHop = route.nextHop ?? packet.dst;
     this.decision(
@@ -115,7 +123,14 @@ export class Router extends Device {
       route.nextHop ? `${this.name} next hop for ${packet.dst} is ${nextHop} out ${out.id}` : `${this.name} ${packet.dst} is directly connected on ${out.id}`,
       { ifaces: [out.id], flowId: meta.flowId },
     );
-    this.arp.sendIpv4(out, nextHop, packet, meta);
+    if (ipOutput(this, this.arp, out, nextHop, packet, meta) === 'too-big') {
+      // RFC 1191: DF set and it doesn't fit: tell the sender the MTU that would work.
+      this.drop('too-big', `${this.name} can't forward a ${packet.totalLength}-byte packet out ${out.id} (MTU ${out.mtu}) and DF is set: sending ICMP Fragmentation Needed (MTU ${out.mtu}) to ${packet.src}`, {
+        iface: out.id,
+        flowId: meta.flowId,
+      });
+      this.sendIcmpError(packet, ICMP_DEST_UNREACHABLE, ICMP_UNREACH_NEEDFRAG, frame, true, out.mtu);
+    }
   }
 
   /** Route and send a packet this router originates. */
@@ -128,7 +143,13 @@ export class Router extends Device {
     this.forward(packet, best, meta);
   }
 
-  private deliverLocal(port: Port, ip: Ipv4Packet, frame: Frame): void {
+  private deliverLocal(port: Port, pkt: Ipv4Packet, frame: Frame): void {
+    let ip = pkt;
+    if (isFragment(pkt)) {
+      const whole = this.reasm.add(pkt, frame);
+      if (!whole) return;
+      ip = whole;
+    }
     const m = ip.payload;
     if (ip.protocol === IPPROTO_ICMP && m.kind === 'icmp' && isIcmpEcho(m) && m.type === ICMP_ECHO_REQUEST) {
       // RFC 1122 3.2.2.6: reply from the address the request was sent to.
@@ -148,7 +169,7 @@ export class Router extends Device {
    * RFC 1812 4.3.2.7: never about an ICMP error, a broadcast/multicast destination, or a
    * non-unicast source. RFC 1812 4.3.2.4: source address is the outgoing interface's.
    */
-  private sendIcmpError(orig: Ipv4Packet, type: typeof ICMP_TIME_EXCEEDED | typeof ICMP_DEST_UNREACHABLE, code: number, frame?: Frame, quiet = false): void {
+  private sendIcmpError(orig: Ipv4Packet, type: typeof ICMP_TIME_EXCEEDED | typeof ICMP_DEST_UNREACHABLE, code: number, frame?: Frame, quiet = false, unused = 0): void {
     const meta = { packetId: frame?.id, flowId: frame?.flowId };
     if (orig.payload.kind === 'icmp' && isIcmpError(orig.payload)) {
       this.decision('icmp-error', `${this.name} not sending ICMP error about an ICMP error (RFC 1812 4.3.2.7)`, meta);
@@ -161,7 +182,7 @@ export class Router extends Device {
       return;
     }
     const src = this.ports.get(best.iface)!.ip!.addr;
-    const err = makeIcmpError(type, code, encodeIpv4Datagram(orig));
+    const err = makeIcmpError(type, code, encodeIpv4Datagram(orig), unused);
     const pkt = makeIpv4({ src, dst: orig.src, protocol: IPPROTO_ICMP, identification: this.nextIpId(), payload: err });
     if (!quiet) this.decision('icmp-error', `${this.name} sending ICMP ${icmpTypeName(type, code)} to ${orig.src}`, meta);
     const m: SendMeta = { flowId: this.engine.newFlowId() };

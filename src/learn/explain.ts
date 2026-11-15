@@ -116,6 +116,16 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
           return { say: `Nobody answered "who has ${ip}?" three times. Giving up.`, why: 'No device on this LAN owns that IP (or it is switched off).', concept: 'unreachable', weight: 'key', tone: 'bad' };
         return { say: `My ARP entry for ${ipLabel(ctx, ip)} expired after 60 s. I'll ask again next time.`, concept: 'aging', weight: 'key', tone: 'muted' };
       }
+      if (e.table === 'pmtu') {
+        const [, mtu] = m(/is (\d+)/, t);
+        return {
+          say: `Noted: packets to ${ipLabel(ctx, e.key)} must be at most ${mtu} bytes. I'll remember that path MTU for 10 minutes.`,
+          why: 'A router told us with ICMP "Fragmentation Needed" (RFC 1191).',
+          concept: 'pmtud',
+          weight: 'key',
+          tone: 'good',
+        };
+      }
       return { say: t, weight: 'minor', tone: 'info' };
     }
 
@@ -229,6 +239,29 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
         }
         case 'local':
           return { say: t.replace(/^\S+ /, ''), weight: 'minor', tone: 'muted' };
+        case 'fragment': {
+          const size = m(/(\d+)-byte/, t)[1];
+          const iface = m(/fit (\S+)'s/, t)[1];
+          const mtu = m(/MTU (\d+)/, t)[1];
+          const n = m(/into (\d+) fragments/, t)[1];
+          const offs = m(/offsets ([\d, ]+), sizes/, t)[1];
+          const sizes = m(/sizes ([\d, ]+) bytes/, t)[1];
+          return {
+            say: `This ${size}-byte packet is too big for ${iface} (MTU ${mtu}). Cutting it into ${n} fragments: offsets ${offs} (in 8-byte units), sizes ${sizes} bytes.`,
+            why: 'Every fragment gets its own copy of the IP header; MF = 1 on all but the last.',
+            concept: 'fragmentation',
+            weight: 'key',
+            tone: 'warn',
+          };
+        }
+        case 'reassemble': {
+          if (/reassembled/.test(t)) {
+            const [, n, size] = m(/reassembled (\d+) fragments into the original (\d+)-byte/, t);
+            return { say: `All ${n} pieces are here! Rebuilt the original ${size}-byte packet.`, concept: 'reassembly', weight: 'key', tone: 'good' };
+          }
+          const [, range] = m(/fragment \(bytes ([^)]+)\)/, t);
+          return { say: `Got a fragment (bytes ${range}). Holding it until the rest arrive.`, why: 'Only the final destination reassembles; routers just pass fragments along.', concept: 'reassembly', weight: 'key', tone: 'info' };
+        }
       }
       return { say: t, weight: 'minor', tone: 'info' };
     }
@@ -283,6 +316,25 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
           return { say: 'The header checksum is wrong (corrupted), so I drop it.', concept: 'checksum', weight: 'key', tone: 'bad' };
         case 'no-link':
           return { say: 'That port has no cable plugged in!', concept: 'port', weight: 'key', tone: 'bad' };
+        case 'too-big': {
+          const size = m(/(\d+)-byte/, t)[1];
+          if (/Fragmentation Needed/.test(t)) {
+            const mtu = m(/MTU (\d+)/, t)[1];
+            return {
+              say: `${size} bytes won't fit the next link (MTU ${mtu}) and DF says "don't fragment". Dropping it and replying "Fragmentation Needed, use ${mtu}".`,
+              why: 'That ICMP reply is what Path MTU Discovery listens for.',
+              concept: 'df',
+              weight: 'key',
+              tone: 'bad',
+            };
+          }
+          const lim = m(/is (\d+)$/, t)[1];
+          return { say: `I already know the path can't carry ${size} bytes (MTU ${lim}), and DF is set. Not even sending it.`, concept: 'pmtud', weight: 'key', tone: 'bad' };
+        }
+        case 'reassembly-timeout':
+          return { say: 'Some fragments never arrived. After 30 s I throw the pieces away. One lost fragment = the whole packet is lost.', concept: 'reassembly', weight: 'key', tone: 'bad' };
+        case 'link-loss':
+          return { say: 'A frame was lost on the cable before it reached me.', concept: 'packet-loss', weight: 'key', tone: 'bad' };
         default:
           return { say: t.replace(/^\S+ /, ''), weight: 'minor', tone: 'muted' };
       }
@@ -290,6 +342,22 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
 
     case 'app': {
       const body = t.replace(/^\S+ /, '');
+      if (e.app === 'pmtud') {
+        if (e.status === 'done') return { say: `Result: ${body}.`, concept: 'pmtud', weight: 'key', tone: /= \d+/.test(body) ? 'good' : 'warn' };
+        if (e.status === 'start') return { say: 'Path MTU discovery: I send big packets with DF set and shrink them whenever a router says "too big".', concept: 'pmtud', weight: 'key', tone: 'info' };
+        if (e.status === 'error') return { say: body.replace(/^(\S+) says: too big, next-hop MTU (\d+)/, (_, r, n) => `${ipLabel(ctx, r)} says the next link only takes ${n} bytes. Trying again at ${n}.`), concept: 'df', weight: 'key', tone: 'warn' };
+        return { say: body.replace(/^probe/, 'Probing with'), concept: 'pmtud', weight: e.status === 'hop' ? 'key' : 'minor', tone: e.status === 'reply' ? 'good' : 'info' };
+      }
+      if (e.app === 'mtr') {
+        if (e.status === 'start') return { say: `MTR: probing every hop to ${body.split(' ')[2]?.replace(':', '')} several times to measure loss and delay per hop.`, concept: 'mtr', weight: 'key', tone: 'info' };
+        if (/round \d+\/\d+ done/.test(body)) return { say: `MTR ${body}.`, concept: 'mtr', weight: 'minor', tone: 'info' };
+        if (/^HOST/.test(body)) return { say: 'MTR report (loss %, probes sent, avg / best / worst ms):', concept: 'mtr', weight: 'key', tone: 'info' };
+        if (/^\s*\d+\./.test(body)) {
+          const [, hop, addr, loss] = m(/^\s*(\d+)\.\s+(\S+)\s+(\S+)%/, body);
+          return { say: `Hop ${hop}: ${ipLabel(ctx, addr)} with ${loss}% loss.${Number(loss) > 0 ? ' Some probes got no answer.' : ''}`, concept: 'mtr', weight: 'key', tone: Number(loss) > 0 ? 'warn' : 'good' };
+        }
+        return { say: body, concept: 'mtr', weight: 'key', tone: e.status === 'error' ? 'bad' : 'good' };
+      }
       if (e.status === 'start')
         return e.app === 'ping'
           ? { say: `Let's ping ${body.split(' ')[1]?.replace(':', '')}: is it reachable, and how fast?`, concept: 'ping', weight: 'key', tone: 'info' }
@@ -307,6 +375,15 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
         if (/Time to live exceeded/.test(body)) return { say: `${ipLabel(ctx, from)} says my packet's TTL ran out.`, concept: 'ttl', weight: 'key', tone: 'bad' };
         if (/Net Unreachable/.test(body)) return { say: `${ipLabel(ctx, from)} says it has no route to that network.`, concept: 'unreachable', weight: 'key', tone: 'bad' };
         if (/Host Unreachable/.test(body)) return { say: `Destination host unreachable, reported by ${ipLabel(ctx, from)}.`, concept: 'unreachable', weight: 'key', tone: 'bad' };
+        if (/Frag needed/.test(body)) {
+          const [, mtu] = m(/mtu = (\d+)/, body);
+          return { say: `${ipLabel(ctx, from)} says my packet is too big for the path (MTU ${mtu}) and I asked it not to fragment.`, concept: 'pmtud', weight: 'key', tone: 'bad' };
+        }
+        if (/Message too long/.test(body)) {
+          const [, mtu] = m(/mtu = (\d+)/, body);
+          return { say: `Message too long: I already know the path MTU is ${mtu}, so this DF packet can't go.`, concept: 'pmtud', weight: 'key', tone: 'bad' };
+        }
+        if (/reassembly time exceeded/.test(body)) return { say: `${ipLabel(ctx, from)} gave up waiting for some of my fragments.`, concept: 'reassembly', weight: 'key', tone: 'bad' };
         return { say: body, concept: 'icmp', weight: 'key', tone: 'bad' };
       }
       if (e.status === 'hop') {
@@ -340,12 +417,23 @@ export function explainPacket(tx: TxEvent, ctx: ExplainCtx): PacketStory {
       return { title: 'ARP request (broadcast)', say: `${ipLabel(ctx, p.spa)} asks everyone: "Who has ${p.tpa}?" It knows the IP but needs the MAC. ${hop}`, concept: 'arp' };
     return { title: 'ARP reply', say: `${ipLabel(ctx, p.spa)} answers "${p.spa} is at ${p.sha}", sent only to the asker. ${hop}`, concept: 'arp' };
   }
+  if (p.kind === 'ipv4' && (p.flags & 1 || p.fragmentOffset > 0)) {
+    const from = p.fragmentOffset * 8;
+    const len = p.totalLength - p.ihl * 4;
+    return {
+      title: `IP fragment · offset ${p.fragmentOffset}${p.flags & 1 ? ' · MF' : ' · last'}`,
+      say: `A slice of a bigger packet (id ${p.identification}) from ${ipLabel(ctx, p.src)}: bytes ${from}–${from + len - 1}. ${p.flags & 1 ? 'More fragments follow.' : 'This is the last piece.'} Only ${ipLabel(ctx, p.dst)} will put it back together. ${hop}`,
+      concept: 'fragmentation',
+    };
+  }
   if (p.kind === 'ipv4' && p.payload.kind === 'icmp') {
     const q = p.payload;
     const macNote = `Ethernet is addressed to ${macLabel(ctx, eth.dst)} for this hop; the IP addresses stay ${p.src} → ${p.dst} end to end.`;
     if (q.type === 8) return { title: `Ping request · TTL ${p.ttl}`, say: `${ipLabel(ctx, p.src)} → ${ipLabel(ctx, p.dst)}: "are you there?" ${macNote}`, concept: 'ping' };
     if (q.type === 0) return { title: `Ping reply · TTL ${p.ttl}`, say: `${ipLabel(ctx, p.src)} answers ${ipLabel(ctx, p.dst)}: "yes, I'm here!" ${macNote}`, concept: 'ping' };
     if (q.type === 11) return { title: 'ICMP Time Exceeded', say: `${ipLabel(ctx, p.src)} reports to ${ipLabel(ctx, p.dst)} that a packet's TTL ran out. ${hop}`, concept: 'ttl' };
+    if (q.type === 3 && q.code === 4)
+      return { title: 'ICMP Fragmentation Needed', say: `${ipLabel(ctx, p.src)} tells ${ipLabel(ctx, p.dst)}: "your packet was too big and had DF set; use at most ${'unused' in q ? q.unused & 0xffff : '?'} bytes". ${hop}`, concept: 'pmtud' };
     if (q.type === 3) return { title: 'ICMP Destination Unreachable', say: `${ipLabel(ctx, p.src)} tells ${ipLabel(ctx, p.dst)} it couldn't deliver a packet. ${hop}`, concept: 'unreachable' };
   }
   return { title: 'Frame', say: hop, concept: 'ethernet' };

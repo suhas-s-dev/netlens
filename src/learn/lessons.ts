@@ -311,8 +311,96 @@ const routerChain: Lesson = {
   ],
 };
 
+const mtuBottleneck: Lesson = {
+  presetId: 'mtu-bottleneck',
+  title: 'Too big for the pipe',
+  summary: 'MTU, fragmentation (the 4404-byte exercise, live), DF and "Fragmentation Needed", path-MTU discovery and MTR.',
+  steps: [
+    {
+      title: 'A narrow link',
+      body: 'Both LANs are normal Ethernet (MTU 1500), but the WAN link between R1 and R2 only carries 1400-byte packets. H1 is about to send a ping with 4376 bytes of data: a 4404-byte IP packet (4376 + 8 ICMP + 20 IP).',
+      concept: 'mtu',
+    },
+    {
+      title: 'Fragmenting at the source',
+      body: "4404 bytes won't fit H1's own 1500-byte MTU, so H1 fragments before sending. Each piece can carry 1500 - 20 = 1480 data bytes: 1480 + 1480 + 1424 = 4384. Click a pink fragment to see its header.",
+      when: on('h1', 'decision', action('fragment')),
+      focus: 'h1',
+      concept: 'fragmentation',
+      quiz: {
+        q: 'The third fragment carries data bytes 2960–4383. What is its Fragment Offset field?',
+        options: ['2960', '370', '3'],
+        answer: 1,
+        explain: 'The offset is counted in 8-byte units: 2960 / 8 = 370. (The second fragment: 1480 / 8 = 185.) MF is 1, 1, 0.',
+      },
+    },
+    {
+      title: 'Fragmenting again',
+      body: "R1 must send them over the 1400-byte WAN. Even the 1500-byte fragments are too big, so R1 splits each one again: 1376 + 104 bytes, and so on. Offsets stay relative to the ORIGINAL packet: 0, 172, 185, 357, 370, 542.",
+      when: on('r1', 'decision', action('fragment')),
+      focus: 'r1',
+      concept: 'fragmentation',
+      quiz: {
+        q: 'Does R1 reassemble the packet before re-fragmenting it?',
+        options: ['Yes, routers rebuild the packet first', 'No: routers never reassemble; only the final destination does'],
+        answer: 1,
+        explain: 'Reassembly needs every piece and costs memory, so it only ever happens at the destination.',
+      },
+    },
+    {
+      title: 'Putting it back together',
+      body: 'H2 collected all six fragments (same Identification, offsets covering every byte, last one with MF = 0) and rebuilt the 4404-byte packet. Had one fragment been lost, the whole packet would be lost.',
+      when: on('h2', 'decision', all(action('reassemble'), text(/reassembled/))),
+      focus: 'h2',
+      concept: 'reassembly',
+    },
+    {
+      title: 'And back again',
+      body: 'The echo reply is just as big, so it went through the same process in reverse: H2 fragmented, R2 re-fragmented, H1 reassembled.',
+      when: on('h1', 'app', status('reply')),
+      focus: 'h1',
+      concept: 'packet-anatomy',
+    },
+    {
+      title: "Don't Fragment",
+      body: 'Now H1 sends a 1500-byte ping with DF set. R1 is not allowed to fragment it, so it drops the packet and sends ICMP type 3 code 4, "Fragmentation Needed", with the WAN MTU (1400) in the header.',
+      when: on('r1', 'drop', reason('too-big')),
+      focus: 'r1',
+      concept: 'df',
+      quiz: {
+        q: 'What does H1 learn from that ICMP message?',
+        options: ['That H2 is down', 'That packets to H2 must be at most 1400 bytes', 'That R1 has no route'],
+        answer: 1,
+        explain: 'The message carries the next-hop MTU. Hosts cache it as the path MTU for that destination (RFC 1191).',
+      },
+    },
+    {
+      title: 'Remembering the path MTU',
+      body: "H1 stores \"path MTU to 10.0.2.20 = 1400\" (click H1: it's in its panel). Its next DF packet to H2 will be sized to fit, or refused locally with \"Message too long\".",
+      when: on('h1', 'table', (e) => e.type === 'table' && e.table === 'pmtu'),
+      focus: 'h1',
+      concept: 'pmtud',
+    },
+    {
+      title: 'Path MTU discovery',
+      body: 'H2 now discovers the path MTU on purpose: a 1500-byte DF probe, a "too big, use 1400" from R2, then a 1400-byte probe that gets through. That is how TCP finds the right packet size.',
+      when: on('h2', 'app', (e) => e.type === 'app' && e.app === 'pmtud' && e.status === 'done'),
+      focus: 'h2',
+      concept: 'pmtud',
+    },
+    {
+      title: 'MTR',
+      body: 'Finally H1 runs MTR: traceroute in rounds, with loss and latency per hop. Every hop shows 0% loss here. Try adding loss to the WAN link in Edit mode (link panel), then run MTR again from the left panel.',
+      when: on('h1', 'app', (e) => e.type === 'app' && e.app === 'mtr' && e.status === 'done'),
+      focus: 'h1',
+      concept: 'mtr',
+    },
+  ],
+};
+
 export const LESSONS: Record<string, Lesson> = {
   [singleLan.presetId]: singleLan,
   [twoLans.presetId]: twoLans,
   [routerChain.presetId]: routerChain,
+  [mtuBottleneck.presetId]: mtuBottleneck,
 };

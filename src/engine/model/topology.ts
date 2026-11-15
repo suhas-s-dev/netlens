@@ -14,6 +14,8 @@ export interface InterfaceJson {
   mac?: string;
   /** "10.0.0.10/24"; ignored on switches. */
   ip?: string;
+  /** Largest IP packet this interface sends (bytes). Default 1500. */
+  mtu?: number;
 }
 
 interface NodeBase {
@@ -56,12 +58,16 @@ export interface LinkJson {
   /** One-way propagation delay. */
   latencyMs?: number;
   bandwidthMbps?: number;
+  /** Chance (0-100) that a frame is lost on this link. Uses the seeded RNG: still deterministic. */
+  lossPercent?: number;
 }
 
 /** Scripted actions for presets (sim time in ms from start). */
 export type ScenarioStep =
-  | { at: number; action: 'ping'; node: string; dst: string; count?: number; intervalMs?: number; ttl?: number }
-  | { at: number; action: 'traceroute'; node: string; dst: string; maxHops?: number };
+  | { at: number; action: 'ping'; node: string; dst: string; count?: number; intervalMs?: number; ttl?: number; size?: number; df?: boolean }
+  | { at: number; action: 'traceroute'; node: string; dst: string; maxHops?: number }
+  | { at: number; action: 'pmtud'; node: string; dst: string }
+  | { at: number; action: 'mtr'; node: string; dst: string; rounds?: number };
 
 export interface TopologyJson {
   version: 1;
@@ -75,3 +81,6 @@ export interface TopologyJson {
 
 export const DEFAULT_LINK_LATENCY_MS = 2;
 export const DEFAULT_LINK_BANDWIDTH_MBPS = 10;
+export const DEFAULT_MTU = 1500;
+/** RFC 791: every IPv4 module must forward a 68-byte datagram without further fragmentation. */
+export const MIN_MTU = 68;

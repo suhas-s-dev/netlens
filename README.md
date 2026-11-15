@@ -30,7 +30,8 @@ Pixel-art 3D: three.js's `RenderPixelatedPass` (no extra dependency) renders the
 
 ## Using it
 
-- **Presets** (top bar): *Single LAN*, *Two LANs + router*, *Three-router chain*. Each preset has a short scripted scenario that starts when you press Play.
+- **Presets** (top bar): *Single LAN*, *Two LANs + router*, *Three-router chain*, *MTU bottleneck*. Each preset has a short scripted scenario that starts when you press Play.
+- **Tools** (left panel): Ping (count, data size, Don't Fragment), Traceroute, MTR (rounds of per-hop loss/latency) and PMTUD (tracepath-style path-MTU discovery).
 - **Time:** `Space` plays or pauses. `.` or `→` steps to the next event. The slider sets speed from 0.1x to 4x. At 1x, 5 ms of sim time passes per wall-clock second, so a 2 ms hop takes about 0.4 s on screen. When nothing is on the wire, time runs faster (1 s of sim time per second), and short idle gaps are skipped.
 - **Detail by distance:** zoomed out shows device names and IPs. Closer in, port indicators and link flashes appear. Closest, port labels and gateways appear. Click a device to see its live tables (ARP, MAC, routes). Rows flash when added, used or refreshed, and turn red when they age out. Double-click a device to fly to it.
 - **Packets:** colour shows the protocol: amber ARP, blue echo request, green echo reply, red ICMP error. Streak length is the frame's serialization time. Clicking a packet pauses the sim and opens the inspector: collapsible layers, a hex dump, field ↔ byte hover highlighting, and the packet's flow hop by hop.
@@ -65,6 +66,13 @@ worker/              Cloudflare Worker entry (static assets; /api/* reserved)
 - **Real bytes:** every frame encodes to real bytes, with correct field order, Ethernet padding to 60 bytes, and IPv4 and ICMP checksums per RFC 1071. The encoder records a byte range for every header field, which drives the hex-view highlighting. Tests check the checksums against RFC 1071, the classic `0xb861` IPv4 header and the Windows ping `0x4d5a` vectors.
 
 ### Behaviour notes (RFC references are in code comments)
+
+- **MTU and fragmentation (RFC 791, 1191):**
+  - Each interface has an MTU (default 1500; the RFC 791 minimum is 68).
+  - Hosts and routers fragment oversized packets into 8-byte-aligned slices, keeping the same Identification and setting MF/offset. Fragments of fragments keep offsets relative to the original.
+  - Only the destination reassembles, with a 30 s timeout that sends ICMP Time Exceeded code 1.
+  - When DF is set, a router drops the packet and replies "Fragmentation Needed" with the next-hop MTU. Hosts cache the path MTU for 10 minutes.
+- **Link loss:** a per-link loss percentage drawn from the seeded RNG, so lossy runs are reproducible.
 
 - **Timing:** serialization delay counts preamble, SFD, FCS and the inter-frame gap. Links are full duplex. Each port has a FIFO transmit queue (64 frames, tail drop).
 - **ARP:** the RFC 826 merge algorithm. Up to 3 packets per destination are queued while resolution is pending, oldest dropped first. Requests are retried 3 times, 1 s apart, then the queued packets are dropped. A host reports *Destination Host Unreachable*; a router sends ICMP Host Unreachable. Entries time out after 60 s.

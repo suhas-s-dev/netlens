@@ -1,5 +1,397 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`preset mtu-bottleneck > produces an identical trace on every run (snapshot) > mtu-bottleneck 1`] = `
+"      0.000000ms app      H1 PING 10.0.2.20: 4376 data bytes (4404-byte packets), ttl 64
+      0.000000ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+      0.000000ms decision H1 4404-byte packet won't fit eth0's MTU 1500: split into 3 fragments (offsets 0, 185, 370, sizes 1500, 1500, 1444 bytes)
+      0.000000ms table    H1 has no ARP entry for 10.0.1.1; queuing packet and resolving
+      0.000000ms decision H1 broadcasting ARP request: who has 10.0.1.1? tell 10.0.1.10 (attempt 1/3)
+      0.000000ms tx       H1 eth0 → R1 eth0: ARP Who has 10.0.1.1? Tell 10.0.1.10 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+      0.000000ms decision H1 queued packet for 10.0.1.1 while ARP is pending (2 waiting)
+      0.000000ms decision H1 queued packet for 10.0.1.1 while ARP is pending (3 waiting)
+      0.000000ms app      H1 ping 10.0.2.20 icmp_seq=1
+      2.067200ms table    R1 learned 10.0.1.10 is at 02:00:00:00:01:01 (from ARP request)
+      2.067200ms decision R1 replying to ARP: 10.0.1.1 is at 02:00:00:00:02:01
+      2.067200ms tx       R1 eth0 → H1 eth0: ARP 10.0.1.1 is at 02:00:00:00:02:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+      4.134400ms table    H1 learned 10.0.1.1 is at 02:00:00:00:02:01 (from ARP reply)
+      4.134400ms decision H1 resolved 10.0.1.1 → 02:00:00:00:02:01; sending 3 queued packet(s)
+      4.134400ms tx       H1 eth0 → R1 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+      5.364800ms tx       H1 eth0 → R1 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+      6.595200ms tx       H1 eth0 → R1 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=370 (bytes 2960–4383) [1458 B, 1.186 ms serialization + 2.000 ms propagation]
+      7.364800ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+      7.364800ms decision R1 TTL 64 → 63, header checksum 0x530f → 0x540f
+      7.364800ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+      7.364800ms decision R1 1500-byte packet won't fit eth1's MTU 1400: split into 2 fragments (offsets 0, 172, sizes 1396, 124 bytes)
+      7.364800ms table    R1 has no ARP entry for 10.0.12.2; queuing packet and resolving
+      7.364800ms decision R1 broadcasting ARP request: who has 10.0.12.2? tell 10.0.12.1 (attempt 1/3)
+      7.364800ms tx       R1 eth1 → R2 eth0: ARP Who has 10.0.12.2? Tell 10.0.12.1 [60 B, 67.2 µs serialization + 4.000 ms propagation]
+      7.364800ms decision R1 queued packet for 10.0.12.2 while ARP is pending (2 waiting)
+      8.595200ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+      8.595200ms decision R1 TTL 64 → 63, header checksum 0x5256 → 0x5356
+      8.595200ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+      8.595200ms decision R1 1500-byte packet won't fit eth1's MTU 1400: split into 2 fragments (offsets 185, 357, sizes 1396, 124 bytes)
+      8.595200ms decision R1 queued packet for 10.0.12.2 while ARP is pending (3 waiting)
+      8.595200ms decision R1 queued packet for 10.0.12.2 while ARP is pending (4 waiting)
+      9.780800ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+      9.780800ms decision R1 TTL 64 → 63, header checksum 0x71d5 → 0x72d5
+      9.780800ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+      9.780800ms decision R1 1444-byte packet won't fit eth1's MTU 1400: split into 2 fragments (offsets 370, 542, sizes 1396, 68 bytes)
+      9.780800ms decision R1 queued packet for 10.0.12.2 while ARP is pending (5 waiting)
+      9.780800ms decision R1 queued packet for 10.0.12.2 while ARP is pending (6 waiting)
+     11.432000ms table    R2 learned 10.0.12.1 is at 02:00:00:00:02:02 (from ARP request)
+     11.432000ms decision R2 replying to ARP: 10.0.12.2 is at 02:00:00:00:03:01
+     11.432000ms tx       R2 eth0 → R1 eth1: ARP 10.0.12.2 is at 02:00:00:00:03:01 [60 B, 67.2 µs serialization + 4.000 ms propagation]
+     15.499200ms table    R1 learned 10.0.12.2 is at 02:00:00:00:03:01 (from ARP reply)
+     15.499200ms decision R1 resolved 10.0.12.2 → 02:00:00:00:03:01; sending 6 queued packet(s)
+     15.499200ms tx       R1 eth1 → R2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=0 (bytes 0–1375) MF [1410 B, 1.147 ms serialization + 4.000 ms propagation]
+     16.646400ms tx       R1 eth1 → R2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=172 (bytes 1376–1479) MF [138 B, 129.6 µs serialization + 4.000 ms propagation]
+     16.776000ms tx       R1 eth1 → R2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=185 (bytes 1480–2855) MF [1410 B, 1.147 ms serialization + 4.000 ms propagation]
+     17.923200ms tx       R1 eth1 → R2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=357 (bytes 2856–2959) MF [138 B, 129.6 µs serialization + 4.000 ms propagation]
+     18.052800ms tx       R1 eth1 → R2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=370 (bytes 2960–4335) MF [1410 B, 1.147 ms serialization + 4.000 ms propagation]
+     19.200000ms tx       R1 eth1 → R2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=542 (bytes 4336–4383) [82 B, 84.8 µs serialization + 4.000 ms propagation]
+     20.646400ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+     20.646400ms decision R2 TTL 63 → 62, header checksum 0x5477 → 0x5577
+     20.646400ms decision R2 10.0.2.20 is directly connected on eth1
+     20.646400ms table    R2 has no ARP entry for 10.0.2.20; queuing packet and resolving
+     20.646400ms decision R2 broadcasting ARP request: who has 10.0.2.20? tell 10.0.2.1 (attempt 1/3)
+     20.646400ms tx       R2 eth1 → H2 eth0: ARP Who has 10.0.2.20? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     20.776000ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+     20.776000ms decision R2 TTL 63 → 62, header checksum 0x58c3 → 0x59c3
+     20.776000ms decision R2 10.0.2.20 is directly connected on eth1
+     20.776000ms decision R2 queued packet for 10.0.2.20 while ARP is pending (2 waiting)
+     21.923200ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+     21.923200ms decision R2 TTL 63 → 62, header checksum 0x53be → 0x54be
+     21.923200ms decision R2 10.0.2.20 is directly connected on eth1
+     21.923200ms decision R2 queued packet for 10.0.2.20 while ARP is pending (3 waiting)
+     22.052800ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+     22.052800ms decision R2 TTL 63 → 62, header checksum 0x580a → 0x590a
+     22.052800ms decision R2 10.0.2.20 is directly connected on eth1
+     22.052800ms decision R2 queued packet for 10.0.2.20 while ARP is pending (4 waiting)
+     22.713600ms table    H2 learned 10.0.2.1 is at 02:00:00:00:03:02 (from ARP request)
+     22.713600ms decision H2 replying to ARP: 10.0.2.20 is at 02:00:00:00:04:01
+     22.713600ms tx       H2 eth0 → R2 eth1: ARP 10.0.2.20 is at 02:00:00:00:04:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     23.200000ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+     23.200000ms decision R2 TTL 63 → 62, header checksum 0x5305 → 0x5405
+     23.200000ms decision R2 10.0.2.20 is directly connected on eth1
+     23.200000ms decision R2 queued packet for 10.0.2.20 while ARP is pending (5 waiting)
+     23.284800ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+     23.284800ms decision R2 TTL 63 → 62, header checksum 0x7789 → 0x7889
+     23.284800ms decision R2 10.0.2.20 is directly connected on eth1
+     23.284800ms decision R2 queued packet for 10.0.2.20 while ARP is pending (6 waiting)
+     24.780800ms table    R2 learned 10.0.2.20 is at 02:00:00:00:04:01 (from ARP reply)
+     24.780800ms decision R2 resolved 10.0.2.20 → 02:00:00:00:04:01; sending 6 queued packet(s)
+     24.780800ms tx       R2 eth1 → H2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=0 (bytes 0–1375) MF [1410 B, 1.147 ms serialization + 2.000 ms propagation]
+     25.928000ms tx       R2 eth1 → H2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=172 (bytes 1376–1479) MF [138 B, 129.6 µs serialization + 2.000 ms propagation]
+     26.057600ms tx       R2 eth1 → H2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=185 (bytes 1480–2855) MF [1410 B, 1.147 ms serialization + 2.000 ms propagation]
+     27.204800ms tx       R2 eth1 → H2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=357 (bytes 2856–2959) MF [138 B, 129.6 µs serialization + 2.000 ms propagation]
+     27.334400ms tx       R2 eth1 → H2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=370 (bytes 2960–4335) MF [1410 B, 1.147 ms serialization + 2.000 ms propagation]
+     27.928000ms decision H2 holding fragment (bytes 0–1375) of packet id=60148 from 10.0.1.10; waiting for the rest
+     28.057600ms decision H2 holding fragment (bytes 1376–1479) of packet id=60148 from 10.0.1.10; waiting for the rest
+     28.481600ms tx       R2 eth1 → H2 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.20 id=60148 offset=542 (bytes 4336–4383) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+     29.204800ms decision H2 holding fragment (bytes 1480–2855) of packet id=60148 from 10.0.1.10; waiting for the rest
+     29.334400ms decision H2 holding fragment (bytes 2856–2959) of packet id=60148 from 10.0.1.10; waiting for the rest
+     30.481600ms decision H2 holding fragment (bytes 2960–4335) of packet id=60148 from 10.0.1.10; waiting for the rest
+     30.566400ms decision H2 reassembled 6 fragments into the original 4404-byte packet (id=60148)
+     30.566400ms decision H2 replying to echo request from 10.0.1.10 (id=38164 seq=1)
+     30.566400ms decision H2: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     30.566400ms decision H2 4404-byte packet won't fit eth0's MTU 1500: split into 3 fragments (offsets 0, 185, 370, sizes 1500, 1500, 1444 bytes)
+     30.566400ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     30.566400ms tx       H2 eth0 → R2 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     30.566400ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     30.566400ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     31.796800ms tx       H2 eth0 → R2 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     33.027200ms tx       H2 eth0 → R2 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=370 (bytes 2960–4383) [1458 B, 1.186 ms serialization + 2.000 ms propagation]
+     33.796800ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+     33.796800ms decision R2 TTL 64 → 63, header checksum 0x1606 → 0x1706
+     33.796800ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+     33.796800ms decision R2 1500-byte packet won't fit eth0's MTU 1400: split into 2 fragments (offsets 0, 172, sizes 1396, 124 bytes)
+     33.796800ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+     33.796800ms tx       R2 eth0 → R1 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=0 (bytes 0–1375) MF [1410 B, 1.147 ms serialization + 4.000 ms propagation]
+     33.796800ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+     34.944000ms tx       R2 eth0 → R1 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=172 (bytes 1376–1479) MF [138 B, 129.6 µs serialization + 4.000 ms propagation]
+     35.027200ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+     35.027200ms decision R2 TTL 64 → 63, header checksum 0x154d → 0x164d
+     35.027200ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+     35.027200ms decision R2 1500-byte packet won't fit eth0's MTU 1400: split into 2 fragments (offsets 185, 357, sizes 1396, 124 bytes)
+     35.027200ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+     35.027200ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+     35.073600ms tx       R2 eth0 → R1 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=185 (bytes 1480–2855) MF [1410 B, 1.147 ms serialization + 4.000 ms propagation]
+     36.212800ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+     36.212800ms decision R2 TTL 64 → 63, header checksum 0x34cc → 0x35cc
+     36.212800ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+     36.212800ms decision R2 1444-byte packet won't fit eth0's MTU 1400: split into 2 fragments (offsets 370, 542, sizes 1396, 68 bytes)
+     36.212800ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+     36.212800ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+     36.220800ms tx       R2 eth0 → R1 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=357 (bytes 2856–2959) MF [138 B, 129.6 µs serialization + 4.000 ms propagation]
+     36.350400ms tx       R2 eth0 → R1 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=370 (bytes 2960–4335) MF [1410 B, 1.147 ms serialization + 4.000 ms propagation]
+     37.497600ms tx       R2 eth0 → R1 eth1: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=542 (bytes 4336–4383) [82 B, 84.8 µs serialization + 4.000 ms propagation]
+     38.944000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+     38.944000ms decision R1 TTL 63 → 62, header checksum 0x176e → 0x186e
+     38.944000ms decision R1 10.0.1.10 is directly connected on eth0
+     38.944000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     38.944000ms tx       R1 eth0 → H1 eth0: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=0 (bytes 0–1375) MF [1410 B, 1.147 ms serialization + 2.000 ms propagation]
+     39.073600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+     39.073600ms decision R1 TTL 63 → 62, header checksum 0x1bba → 0x1cba
+     39.073600ms decision R1 10.0.1.10 is directly connected on eth0
+     39.073600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     40.091200ms tx       R1 eth0 → H1 eth0: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=172 (bytes 1376–1479) MF [138 B, 129.6 µs serialization + 2.000 ms propagation]
+     40.220800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+     40.220800ms decision R1 TTL 63 → 62, header checksum 0x16b5 → 0x17b5
+     40.220800ms decision R1 10.0.1.10 is directly connected on eth0
+     40.220800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     40.220800ms tx       R1 eth0 → H1 eth0: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=185 (bytes 1480–2855) MF [1410 B, 1.147 ms serialization + 2.000 ms propagation]
+     40.350400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+     40.350400ms decision R1 TTL 63 → 62, header checksum 0x1b01 → 0x1c01
+     40.350400ms decision R1 10.0.1.10 is directly connected on eth0
+     40.350400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     41.368000ms tx       R1 eth0 → H1 eth0: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=357 (bytes 2856–2959) MF [138 B, 129.6 µs serialization + 2.000 ms propagation]
+     41.497600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+     41.497600ms decision R1 TTL 63 → 62, header checksum 0x15fc → 0x16fc
+     41.497600ms decision R1 10.0.1.10 is directly connected on eth0
+     41.497600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     41.497600ms tx       R1 eth0 → H1 eth0: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=370 (bytes 2960–4335) MF [1410 B, 1.147 ms serialization + 2.000 ms propagation]
+     41.582400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+     41.582400ms decision R1 TTL 63 → 62, header checksum 0x3a80 → 0x3b80
+     41.582400ms decision R1 10.0.1.10 is directly connected on eth0
+     41.582400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     42.091200ms decision H1 holding fragment (bytes 0–1375) of packet id=10238 from 10.0.2.20; waiting for the rest
+     42.220800ms decision H1 holding fragment (bytes 1376–1479) of packet id=10238 from 10.0.2.20; waiting for the rest
+     42.644800ms tx       R1 eth0 → H1 eth0: IPv4 fragment 10.0.2.20 → 10.0.1.10 id=10238 offset=542 (bytes 4336–4383) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+     43.368000ms decision H1 holding fragment (bytes 1480–2855) of packet id=10238 from 10.0.2.20; waiting for the rest
+     43.497600ms decision H1 holding fragment (bytes 2856–2959) of packet id=10238 from 10.0.2.20; waiting for the rest
+     44.644800ms decision H1 holding fragment (bytes 2960–4335) of packet id=10238 from 10.0.2.20; waiting for the rest
+     44.729600ms decision H1 reassembled 6 fragments into the original 4404-byte packet (id=10238)
+     44.729600ms app      H1 4376 bytes from 10.0.2.20: icmp_seq=1 ttl=62 time=44.730 ms
+     44.729600ms app      H1 --- 10.0.2.20 ping statistics --- 1 packets transmitted, 1 received, 0% packet loss, rtt min/avg/max = 44.730/44.730/44.730 ms
+   2000.000000ms app      H1 PING 10.0.2.20: 1472 data bytes (1500-byte packets), ttl 64, DF set
+   2000.000000ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   2000.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   2000.000000ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=44583 seq=1 ttl=64 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   2000.000000ms app      H1 ping 10.0.2.20 icmp_seq=1
+   2003.230400ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   2003.230400ms decision R1 TTL 64 → 63, header checksum 0x330e → 0x340e
+   2003.230400ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   2003.230400ms drop     R1 can't forward a 1500-byte packet out eth1 (MTU 1400) and DF is set: sending ICMP Fragmentation Needed (MTU 1400) to 10.0.1.10
+   2003.230400ms decision R1 10.0.1.10 is directly connected on eth0
+   2003.230400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   2003.230400ms tx       R1 eth0 → H1 eth0: ICMP Destination unreachable (Fragmentation needed and DF set) 10.0.1.1 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   2005.305600ms table    H1 learned path MTU to 10.0.2.20 is 1400 (from 10.0.1.1)
+   2005.305600ms app      H1 From 10.0.1.1 icmp_seq=1 Frag needed and DF set (mtu = 1400)
+   2005.305600ms app      H1 --- 10.0.2.20 ping statistics --- 1 packets transmitted, 0 received, +1 errors, 100% packet loss
+   3000.000000ms app      H2 PMTUD to 10.0.1.10: probing with DF set, starting at my MTU 1500
+   3000.000000ms app      H2 probe 1500 bytes (DF)
+   3000.000000ms decision H2: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   3000.000000ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   3000.000000ms tx       H2 eth0 → R2 eth1: ICMP echo request 10.0.2.20 → 10.0.1.10 id=40660 seq=1 ttl=64 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   3003.230400ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+   3003.230400ms decision R2 TTL 64 → 63, header checksum 0xf604 → 0xf704
+   3003.230400ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   3003.230400ms drop     R2 can't forward a 1500-byte packet out eth0 (MTU 1400) and DF is set: sending ICMP Fragmentation Needed (MTU 1400) to 10.0.2.20
+   3003.230400ms decision R2 10.0.2.20 is directly connected on eth1
+   3003.230400ms table    R2 ARP cache hit: 10.0.2.20 is at 02:00:00:00:04:01 (eth1)
+   3003.230400ms tx       R2 eth1 → H2 eth0: ICMP Destination unreachable (Fragmentation needed and DF set) 10.0.2.1 → 10.0.2.20 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   3005.305600ms table    H2 learned path MTU to 10.0.1.10 is 1400 (from 10.0.2.1)
+   3005.305600ms app      H2 10.0.2.1 says: too big, next-hop MTU 1400
+   3005.305600ms app      H2 probe 1400 bytes (DF)
+   3005.305600ms decision H2: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   3005.305600ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   3005.305600ms tx       H2 eth0 → R2 eth1: ICMP echo request 10.0.2.20 → 10.0.1.10 id=40660 seq=2 ttl=64 [1414 B, 1.150 ms serialization + 2.000 ms propagation]
+   3008.456000ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+   3008.456000ms decision R2 TTL 64 → 63, header checksum 0xf667 → 0xf767
+   3008.456000ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   3008.456000ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   3008.456000ms tx       R2 eth0 → R1 eth1: ICMP echo request 10.0.2.20 → 10.0.1.10 id=40660 seq=2 ttl=63 [1414 B, 1.150 ms serialization + 4.000 ms propagation]
+   3013.606400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   3013.606400ms decision R1 TTL 63 → 62, header checksum 0xf767 → 0xf867
+   3013.606400ms decision R1 10.0.1.10 is directly connected on eth0
+   3013.606400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   3013.606400ms tx       R1 eth0 → H1 eth0: ICMP echo request 10.0.2.20 → 10.0.1.10 id=40660 seq=2 ttl=62 [1414 B, 1.150 ms serialization + 2.000 ms propagation]
+   3016.756800ms decision H1 replying to echo request from 10.0.2.20 (id=40660 seq=2)
+   3016.756800ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   3016.756800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   3016.756800ms tx       H1 eth0 → R1 eth0: ICMP echo reply 10.0.1.10 → 10.0.2.20 id=40660 seq=2 ttl=64 [1414 B, 1.150 ms serialization + 2.000 ms propagation]
+   3019.907200ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   3019.907200ms decision R1 TTL 64 → 63, header checksum 0x7371 → 0x7471
+   3019.907200ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   3019.907200ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   3019.907200ms tx       R1 eth1 → R2 eth0: ICMP echo reply 10.0.1.10 → 10.0.2.20 id=40660 seq=2 ttl=63 [1414 B, 1.150 ms serialization + 4.000 ms propagation]
+   3025.057600ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   3025.057600ms decision R2 TTL 63 → 62, header checksum 0x7471 → 0x7571
+   3025.057600ms decision R2 10.0.2.20 is directly connected on eth1
+   3025.057600ms table    R2 ARP cache hit: 10.0.2.20 is at 02:00:00:00:04:01 (eth1)
+   3025.057600ms tx       R2 eth1 → H2 eth0: ICMP echo reply 10.0.1.10 → 10.0.2.20 id=40660 seq=2 ttl=62 [1414 B, 1.150 ms serialization + 2.000 ms propagation]
+   3028.208000ms app      H2 1400 bytes reached 10.0.1.10 without fragmentation
+   3028.208000ms app      H2 path MTU to 10.0.1.10 = 1400
+   5000.000000ms app      H1 mtr to 10.0.2.20: 3 rounds, one probe per hop per round
+   5000.000000ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5000.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5000.000000ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=1 ttl=1 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5002.078400ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5002.078400ms drop     R1 dropped packet: TTL expired, sending ICMP Time Exceeded to 10.0.1.10
+   5002.078400ms decision R1 10.0.1.10 is directly connected on eth0
+   5002.078400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5002.078400ms tx       R1 eth0 → H1 eth0: ICMP Time-to-live exceeded in transit 10.0.1.1 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   5004.153600ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5004.153600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5004.153600ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=2 ttl=2 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5006.232000ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5006.232000ms decision R1 TTL 2 → 1, header checksum 0xb6ab → 0xb7ab
+   5006.232000ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   5006.232000ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   5006.232000ms tx       R1 eth1 → R2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=2 ttl=1 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5010.310400ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   5010.310400ms drop     R2 dropped packet: TTL expired, sending ICMP Time Exceeded to 10.0.1.10
+   5010.310400ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   5010.310400ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   5010.310400ms tx       R2 eth0 → R1 eth1: ICMP Time-to-live exceeded in transit 10.0.12.2 → 10.0.1.10 [70 B, 75.2 µs serialization + 4.000 ms propagation]
+   5014.385600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   5014.385600ms decision R1 TTL 64 → 63, header checksum 0x94cc → 0x95cc
+   5014.385600ms decision R1 10.0.1.10 is directly connected on eth0
+   5014.385600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5014.385600ms tx       R1 eth0 → H1 eth0: ICMP Time-to-live exceeded in transit 10.0.12.2 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   5016.460800ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5016.460800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5016.460800ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=3 ttl=3 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5018.539200ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5018.539200ms decision R1 TTL 3 → 2, header checksum 0xb5aa → 0xb6aa
+   5018.539200ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   5018.539200ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   5018.539200ms tx       R1 eth1 → R2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=3 ttl=2 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5022.617600ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   5022.617600ms decision R2 TTL 2 → 1, header checksum 0xb6aa → 0xb7aa
+   5022.617600ms decision R2 10.0.2.20 is directly connected on eth1
+   5022.617600ms table    R2 ARP cache hit: 10.0.2.20 is at 02:00:00:00:04:01 (eth1)
+   5022.617600ms tx       R2 eth1 → H2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=3 ttl=1 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5024.696000ms decision H2 replying to echo request from 10.0.1.10 (id=22496 seq=3)
+   5024.696000ms decision H2: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   5024.696000ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   5024.696000ms tx       H2 eth0 → R2 eth1: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=3 ttl=64 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5026.774400ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+   5026.774400ms decision R2 TTL 64 → 63, header checksum 0x3ba3 → 0x3ca3
+   5026.774400ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   5026.774400ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   5026.774400ms tx       R2 eth0 → R1 eth1: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=3 ttl=63 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5030.852800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   5030.852800ms decision R1 TTL 63 → 62, header checksum 0x3ca3 → 0x3da3
+   5030.852800ms decision R1 10.0.1.10 is directly connected on eth0
+   5030.852800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5030.852800ms tx       R1 eth0 → H1 eth0: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=3 ttl=62 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5032.931200ms app      H1 round 1/3 done
+   5232.931200ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5232.931200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5232.931200ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=4 ttl=1 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5235.009600ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5235.009600ms drop     R1 dropped packet: TTL expired, sending ICMP Time Exceeded to 10.0.1.10
+   5235.009600ms decision R1 10.0.1.10 is directly connected on eth0
+   5235.009600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5235.009600ms tx       R1 eth0 → H1 eth0: ICMP Time-to-live exceeded in transit 10.0.1.1 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   5237.084800ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5237.084800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5237.084800ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=5 ttl=2 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5239.163200ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5239.163200ms decision R1 TTL 2 → 1, header checksum 0xb6a8 → 0xb7a8
+   5239.163200ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   5239.163200ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   5239.163200ms tx       R1 eth1 → R2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=5 ttl=1 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5243.241600ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   5243.241600ms drop     R2 dropped packet: TTL expired, sending ICMP Time Exceeded to 10.0.1.10
+   5243.241600ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   5243.241600ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   5243.241600ms tx       R2 eth0 → R1 eth1: ICMP Time-to-live exceeded in transit 10.0.12.2 → 10.0.1.10 [70 B, 75.2 µs serialization + 4.000 ms propagation]
+   5247.316800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   5247.316800ms decision R1 TTL 64 → 63, header checksum 0x94cb → 0x95cb
+   5247.316800ms decision R1 10.0.1.10 is directly connected on eth0
+   5247.316800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5247.316800ms tx       R1 eth0 → H1 eth0: ICMP Time-to-live exceeded in transit 10.0.12.2 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   5249.392000ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5249.392000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5249.392000ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=6 ttl=3 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5251.470400ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5251.470400ms decision R1 TTL 3 → 2, header checksum 0xb5a7 → 0xb6a7
+   5251.470400ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   5251.470400ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   5251.470400ms tx       R1 eth1 → R2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=6 ttl=2 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5255.548800ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   5255.548800ms decision R2 TTL 2 → 1, header checksum 0xb6a7 → 0xb7a7
+   5255.548800ms decision R2 10.0.2.20 is directly connected on eth1
+   5255.548800ms table    R2 ARP cache hit: 10.0.2.20 is at 02:00:00:00:04:01 (eth1)
+   5255.548800ms tx       R2 eth1 → H2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=6 ttl=1 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5257.627200ms decision H2 replying to echo request from 10.0.1.10 (id=22496 seq=6)
+   5257.627200ms decision H2: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   5257.627200ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   5257.627200ms tx       H2 eth0 → R2 eth1: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=6 ttl=64 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5259.705600ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+   5259.705600ms decision R2 TTL 64 → 63, header checksum 0x3ba2 → 0x3ca2
+   5259.705600ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   5259.705600ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   5259.705600ms tx       R2 eth0 → R1 eth1: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=6 ttl=63 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5263.784000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   5263.784000ms decision R1 TTL 63 → 62, header checksum 0x3ca2 → 0x3da2
+   5263.784000ms decision R1 10.0.1.10 is directly connected on eth0
+   5263.784000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5263.784000ms tx       R1 eth0 → H1 eth0: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=6 ttl=62 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5265.862400ms app      H1 round 2/3 done
+   5465.862400ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5465.862400ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5465.862400ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=7 ttl=1 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5467.940800ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5467.940800ms drop     R1 dropped packet: TTL expired, sending ICMP Time Exceeded to 10.0.1.10
+   5467.940800ms decision R1 10.0.1.10 is directly connected on eth0
+   5467.940800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5467.940800ms tx       R1 eth0 → H1 eth0: ICMP Time-to-live exceeded in transit 10.0.1.1 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   5470.016000ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5470.016000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5470.016000ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=8 ttl=2 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5472.094400ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5472.094400ms decision R1 TTL 2 → 1, header checksum 0xb6a5 → 0xb7a5
+   5472.094400ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   5472.094400ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   5472.094400ms tx       R1 eth1 → R2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=8 ttl=1 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5476.172800ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   5476.172800ms drop     R2 dropped packet: TTL expired, sending ICMP Time Exceeded to 10.0.1.10
+   5476.172800ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   5476.172800ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   5476.172800ms tx       R2 eth0 → R1 eth1: ICMP Time-to-live exceeded in transit 10.0.12.2 → 10.0.1.10 [70 B, 75.2 µs serialization + 4.000 ms propagation]
+   5480.248000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   5480.248000ms decision R1 TTL 64 → 63, header checksum 0x94ca → 0x95ca
+   5480.248000ms decision R1 10.0.1.10 is directly connected on eth0
+   5480.248000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5480.248000ms tx       R1 eth0 → H1 eth0: ICMP Time-to-live exceeded in transit 10.0.12.2 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   5482.323200ms decision H1: 10.0.2.20 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5482.323200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:02:01 (eth0)
+   5482.323200ms tx       H1 eth0 → R1 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=9 ttl=3 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5484.401600ms decision R1 LPM: 10.0.2.20 matched 0.0.0.0/0 via eth1 (static, next hop 10.0.12.2)
+   5484.401600ms decision R1 TTL 3 → 2, header checksum 0xb5a4 → 0xb6a4
+   5484.401600ms decision R1 next hop for 10.0.2.20 is 10.0.12.2 out eth1
+   5484.401600ms table    R1 ARP cache hit: 10.0.12.2 is at 02:00:00:00:03:01 (eth1)
+   5484.401600ms tx       R1 eth1 → R2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=9 ttl=2 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5488.480000ms decision R2 LPM: 10.0.2.20 matched 10.0.2.0/24 via eth1 (connected); also matched 0.0.0.0/0
+   5488.480000ms decision R2 TTL 2 → 1, header checksum 0xb6a4 → 0xb7a4
+   5488.480000ms decision R2 10.0.2.20 is directly connected on eth1
+   5488.480000ms table    R2 ARP cache hit: 10.0.2.20 is at 02:00:00:00:04:01 (eth1)
+   5488.480000ms tx       R2 eth1 → H2 eth0: ICMP echo request 10.0.1.10 → 10.0.2.20 id=22496 seq=9 ttl=1 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5490.558400ms decision H2 replying to echo request from 10.0.1.10 (id=22496 seq=9)
+   5490.558400ms decision H2: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   5490.558400ms table    H2 ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   5490.558400ms tx       H2 eth0 → R2 eth1: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=9 ttl=64 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5492.636800ms decision R2 LPM: 10.0.1.10 matched 0.0.0.0/0 via eth0 (static, next hop 10.0.12.1)
+   5492.636800ms decision R2 TTL 64 → 63, header checksum 0x3ba1 → 0x3ca1
+   5492.636800ms decision R2 next hop for 10.0.1.10 is 10.0.12.1 out eth0
+   5492.636800ms table    R2 ARP cache hit: 10.0.12.1 is at 02:00:00:00:02:02 (eth0)
+   5492.636800ms tx       R2 eth0 → R1 eth1: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=9 ttl=63 [74 B, 78.4 µs serialization + 4.000 ms propagation]
+   5496.715200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected); also matched 0.0.0.0/0
+   5496.715200ms decision R1 TTL 63 → 62, header checksum 0x3ca1 → 0x3da1
+   5496.715200ms decision R1 10.0.1.10 is directly connected on eth0
+   5496.715200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5496.715200ms tx       R1 eth0 → H1 eth0: ICMP echo reply 10.0.2.20 → 10.0.1.10 id=22496 seq=9 ttl=62 [74 B, 78.4 µs serialization + 2.000 ms propagation]
+   5498.793600ms app      H1 round 3/3 done
+   5498.793600ms app      H1 HOST                 Loss%  Snt   Avg   Best  Wrst
+   5498.793600ms app      H1  1. 10.0.1.1           0.0%    3   4.2   4.2   4.2
+   5498.793600ms app      H1  2. 10.0.12.2          0.0%    3  12.3  12.3  12.3
+   5498.793600ms app      H1  3. 10.0.2.20          0.0%    3  16.5  16.5  16.5
+   5498.793600ms app      H1 mtr to 10.0.2.20 complete"
+`;
+
 exports[`preset router-chain > produces an identical trace on every run (snapshot) > router-chain 1`] = `
 "      0.000000ms app      H1 traceroute to 10.0.3.10, 30 hops max, ICMP echo probes
       0.000000ms decision H1: 10.0.3.10 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
@@ -454,7 +846,7 @@ exports[`preset router-chain > produces an identical trace on every run (snapsho
     277.697600ms tx       SW1 port 1 → H1 eth0: ICMP echo reply 10.0.3.10 → 10.0.1.10 id=44583 seq=12 ttl=61 [74 B, 78.4 µs serialization + 2.000 ms propagation]
     279.776000ms app      H1  4  10.0.3.10  41.210 ms  32.941 ms  32.941 ms
     279.776000ms app      H1 traceroute to 10.0.3.10 complete
-   2000.000000ms app      H1 PING 10.0.99.1: 32 data bytes, ttl 64
+   2000.000000ms app      H1 PING 10.0.99.1: 32 data bytes (60-byte packets), ttl 64
    2000.000000ms decision H1: 10.0.99.1 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
    2000.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
    2000.000000ms tx       H1 eth0 → SW1 port 1: ICMP echo request 10.0.1.10 → 10.0.99.1 id=40660 seq=1 ttl=64 [74 B, 78.4 µs serialization + 2.000 ms propagation]
@@ -487,7 +879,7 @@ exports[`preset router-chain > produces an identical trace on every run (snapsho
 `;
 
 exports[`preset single-lan > produces an identical trace on every run (snapshot) > single-lan 1`] = `
-"      0.000000ms app      H1 PING 10.0.0.30: 32 data bytes, ttl 64
+"      0.000000ms app      H1 PING 10.0.0.30: 32 data bytes (60-byte packets), ttl 64
       0.000000ms decision H1: 10.0.0.30 is on-link (10.0.0.0/24), delivering directly
       0.000000ms table    H1 has no ARP entry for 10.0.0.30; queuing packet and resolving
       0.000000ms decision H1 broadcasting ARP request: who has 10.0.0.30? tell 10.0.0.10 (attempt 1/3)
@@ -539,7 +931,7 @@ exports[`preset single-lan > produces an identical trace on every run (snapshot)
    1006.235200ms tx       SW1 port 1 → H1 eth0: ICMP echo reply 10.0.0.30 → 10.0.0.10 id=8997 seq=2 ttl=64 [74 B, 78.4 µs serialization + 2.000 ms propagation]
    1008.313600ms app      H1 32 bytes from 10.0.0.30: icmp_seq=2 ttl=64 time=8.314 ms
    1008.313600ms app      H1 --- 10.0.0.30 ping statistics --- 2 packets transmitted, 2 received, 0% packet loss, rtt min/avg/max = 8.314/12.448/16.582 ms
-   2500.000000ms app      H2 PING 10.0.0.10: 32 data bytes, ttl 64
+   2500.000000ms app      H2 PING 10.0.0.10: 32 data bytes (60-byte packets), ttl 64
    2500.000000ms decision H2: 10.0.0.10 is on-link (10.0.0.0/24), delivering directly
    2500.000000ms table    H2 has no ARP entry for 10.0.0.10; queuing packet and resolving
    2500.000000ms decision H2 broadcasting ARP request: who has 10.0.0.10? tell 10.0.0.20 (attempt 1/3)
@@ -577,7 +969,7 @@ exports[`preset single-lan > produces an identical trace on every run (snapshot)
 `;
 
 exports[`preset two-lans > produces an identical trace on every run (snapshot) > two-lans 1`] = `
-"      0.000000ms app      H1 PING 10.0.2.15: 32 data bytes, ttl 64
+"      0.000000ms app      H1 PING 10.0.2.15: 32 data bytes (60-byte packets), ttl 64
       0.000000ms decision H1: 10.0.2.15 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
       0.000000ms table    H1 has no ARP entry for 10.0.1.1; queuing packet and resolving
       0.000000ms decision H1 broadcasting ARP request: who has 10.0.1.1? tell 10.0.1.10 (attempt 1/3)
@@ -681,7 +1073,7 @@ exports[`preset two-lans > produces an identical trace on every run (snapshot) >
    1014.548800ms tx       SW1 port 1 → H1 eth0: ICMP echo reply 10.0.2.15 → 10.0.1.10 id=44583 seq=2 ttl=63 [74 B, 78.4 µs serialization + 2.000 ms propagation]
    1016.627200ms app      H1 32 bytes from 10.0.2.15: icmp_seq=2 ttl=63 time=16.627 ms
    1016.627200ms app      H1 --- 10.0.2.15 ping statistics --- 2 packets transmitted, 2 received, 0% packet loss, rtt min/avg/max = 16.627/24.896/33.165 ms
-   3000.000000ms app      H2 PING 10.0.1.10: 32 data bytes, ttl 64
+   3000.000000ms app      H2 PING 10.0.1.10: 32 data bytes (60-byte packets), ttl 64
    3000.000000ms decision H2: 10.0.1.10 is on-link (10.0.1.0/24), delivering directly
    3000.000000ms table    H2 has no ARP entry for 10.0.1.10; queuing packet and resolving
    3000.000000ms decision H2 broadcasting ARP request: who has 10.0.1.10? tell 10.0.1.11 (attempt 1/3)

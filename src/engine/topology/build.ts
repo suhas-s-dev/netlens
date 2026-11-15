@@ -14,6 +14,7 @@ export interface LinkRuntime {
   b: LinkEndJson;
   latencyNs: number;
   bandwidthBps: number;
+  lossPct: number;
 }
 
 /** Deterministic locally-administered MAC: 02:00:00:NN:NN:II (node index, iface index). */
@@ -25,6 +26,7 @@ export function generatedMac(nodeIndex: number, ifaceIndex: number): string {
 function portsOf(n: NodeJson, nodeIndex: number): PortInit[] {
   return n.interfaces.map((i, k) => {
     const p: PortInit = { id: i.id, mac: (i.mac ?? generatedMac(nodeIndex, k)).toLowerCase() };
+    if (i.mtu !== undefined) p.mtu = i.mtu;
     if (i.ip && n.type !== 'switch') {
       const { ip, prefix } = parseCidr(i.ip);
       p.ip = { addr: ip, prefix };
@@ -76,6 +78,7 @@ export function buildDevices(engine: Engine, topo: TopologyJson): { devices: Map
       b: l.b,
       latencyNs: Math.round((l.latencyMs ?? DEFAULT_LINK_LATENCY_MS) * MS),
       bandwidthBps: (l.bandwidthMbps ?? DEFAULT_LINK_BANDWIDTH_MBPS) * 1e6,
+      lossPct: Math.min(100, Math.max(0, l.lossPercent ?? 0)),
     });
   }
   return { devices, links };

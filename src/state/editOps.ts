@@ -98,7 +98,20 @@ export function removeLink(t: TopologyJson, id: string): TopologyJson {
   return { ...t, links: t.links.filter((l) => l.id !== id) };
 }
 
-export function updateLink(t: TopologyJson, id: string, patch: Partial<Pick<LinkJson, 'latencyMs' | 'bandwidthMbps'>>): TopologyJson {
+export function setInterfaceMtu(t: TopologyJson, nodeId: string, ifaceId: string, value: string): TopologyJson {
+  const n = value.trim() === '' ? undefined : Number(value);
+  return updateNode(t, nodeId, (x) => ({
+    ...x,
+    interfaces: x.interfaces.map((i) => {
+      if (i.id !== ifaceId) return i;
+      const { mtu: _drop, ...rest } = i;
+      void _drop;
+      return n === undefined || Number.isNaN(n) ? rest : { ...rest, mtu: n };
+    }),
+  }) as NodeJson);
+}
+
+export function updateLink(t: TopologyJson, id: string, patch: Partial<Pick<LinkJson, 'latencyMs' | 'bandwidthMbps' | 'lossPercent'>>): TopologyJson {
   return { ...t, links: t.links.map((l) => (l.id === id ? { ...l, ...patch } : l)) };
 }
 

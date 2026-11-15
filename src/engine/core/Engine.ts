@@ -9,7 +9,7 @@
  * only through commands (`ping`, `traceroute`, ...) and the clock (`step`, `runUntil`).
  */
 import type { Device, Port, SendMeta } from '../devices/Device';
-import { Host, type PingOptions, type TracerouteOptions } from '../devices/Host';
+import { Host, type MtrOptions, type PingOptions, type TracerouteOptions } from '../devices/Host';
 import type { DeviceState } from '../devices/state';
 import type { Frame } from '../model/frame';
 import { encodeFrame } from '../model/frame';
@@ -168,6 +168,9 @@ export class Engine {
     const txStart = this.now;
     const txEnd = txStart + ser;
     const arrive = txEnd + link.latencyNs;
+    // Random loss is decided when the frame is sent, from the seeded RNG (only consumed on
+    // lossy links, so lossless topologies keep identical traces).
+    const lost = link.lossPct > 0 && this.rng.next() * 100 < link.lossPct;
     port.txBusy = true;
     this.emit({
       type: 'tx',
@@ -193,6 +196,10 @@ export class Engine {
       if (next) this.startTx(dev, port, next);
     }, dev.id);
     this.queue.push(arrive, `${peer.name} ${peerPort.id} rx ${frame.id}`, () => {
+      if (lost) {
+        this.emit({ type: 'drop', node: peer.id, reason: 'link-loss', iface: peerPort.id, packetId: frame.id, flowId: frame.flowId, text: `${summarizeFrame(frame.eth)} was lost on the link ${dev.name} → ${peer.name} (${link.lossPct}% loss)` });
+        return;
+      }
       this.emit({ type: 'rx', node: peer.id, iface: peerPort.id, link: link.id, frame, packetId: frame.id, flowId: frame.flowId, text: `${peer.name} ${peer.portLabel(peerPort)} received ${summarizeFrame(frame.eth)}` });
       peer.receive(peerPort, frame);
     }, peer.id);
@@ -216,6 +223,16 @@ export class Engine {
     return this.host(hostId, dst).startTraceroute(dst, opts);
   }
 
+  /** Path-MTU discovery (tracepath-style DF probes). */
+  pmtud(hostId: string, dst: string): string {
+    return this.host(hostId, dst).startPmtud(dst);
+  }
+
+  /** MTR: repeated per-hop probing with loss/latency statistics. */
+  mtr(hostId: string, dst: string, opts?: MtrOptions): string {
+    return this.host(hostId, dst).startMtr(dst, opts);
+  }
+
   private scheduleScenario(): void {
     for (const s of this.topology.scenario ?? []) {
       // Skip steps that no longer make sense (e.g. the host was deleted in the editor).
@@ -226,7 +243,13 @@ export class Engine {
           if (s.count !== undefined) o.count = s.count;
           if (s.intervalMs !== undefined) o.intervalNs = s.intervalMs * MS;
           if (s.ttl !== undefined) o.ttl = s.ttl;
+          if (s.size !== undefined) o.size = s.size;
+          if (s.df !== undefined) o.df = s.df;
           this.ping(s.node, s.dst, o);
+        } else if (s.action === 'pmtud') {
+          this.pmtud(s.node, s.dst);
+        } else if (s.action === 'mtr') {
+          this.mtr(s.node, s.dst, s.rounds !== undefined ? { rounds: s.rounds } : {});
         } else {
           const o: TracerouteOptions = {};
           if (s.maxHops !== undefined) o.maxHops = s.maxHops;

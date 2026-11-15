@@ -64,7 +64,15 @@ export function computeIpv4Checksum(p: Ipv4Packet): number {
 export function encodeIpv4(w: ByteWriter, p: Ipv4Packet): void {
   w.layer('IPv4', () => writeHeader(w, p, true));
   if (p.payload.kind === 'raw') {
-    if (p.payload.bytes.length) w.field('Data', 'data', 'Data', `${p.payload.bytes.length} bytes`, () => w.bytes((p.payload as { bytes: Uint8Array }).bytes));
+    const bytes = p.payload.bytes;
+    if (bytes.length) {
+      if (isFragment(p)) {
+        const from = p.fragmentOffset * 8;
+        w.field('Data', 'data.fragment', 'Fragment data', `${bytes.length} bytes = bytes ${from}–${from + bytes.length - 1} of the original payload`, () => w.bytes(bytes));
+      } else {
+        w.field('Data', 'data', 'Data', `${bytes.length} bytes`, () => w.bytes(bytes));
+      }
+    }
   } else {
     encodeIcmp(w, p.payload);
   }
@@ -98,7 +106,11 @@ export function decodeIpv4(r: ByteReader): Ipv4Packet {
   const payloadEnd = start + totalLength;
   if (payloadEnd > r.end) throw new RangeError(`IPv4 total length ${totalLength} exceeds buffer`);
   const pr = new ByteReader(r.buf, r.pos, payloadEnd);
-  const payload: Ipv4Payload = protocol === IPPROTO_ICMP ? decodeIcmp(pr) : { kind: 'raw', bytes: pr.rest() };
+  const flags = ff >>> 13;
+  const fragmentOffset = ff & 0x1fff;
+  // A fragment carries only a slice of the upper-layer message: keep it as raw bytes.
+  const fragmented = (flags & IPV4_FLAG_MF) !== 0 || fragmentOffset > 0;
+  const payload: Ipv4Payload = protocol === IPPROTO_ICMP && !fragmented ? decodeIcmp(pr) : { kind: 'raw', bytes: pr.rest() };
   r.pos = payloadEnd;
   return {
     kind: 'ipv4',
@@ -108,8 +120,8 @@ export function decodeIpv4(r: ByteReader): Ipv4Packet {
     ecn: tos & 3,
     totalLength,
     identification,
-    flags: ff >>> 13,
-    fragmentOffset: ff & 0x1fff,
+    flags,
+    fragmentOffset,
     ttl,
     protocol,
     checksum,
@@ -165,4 +177,58 @@ export function withTtl(p: Ipv4Packet, ttl: number): Ipv4Packet {
 
 export function ipv4HeaderValid(p: Ipv4Packet): boolean {
   return computeIpv4Checksum(p) === p.checksum;
+}
+
+export function isFragment(p: Pick<Ipv4Packet, 'flags' | 'fragmentOffset'>): boolean {
+  return (p.flags & IPV4_FLAG_MF) !== 0 || p.fragmentOffset > 0;
+}
+
+/** Upper-layer bytes carried by this datagram. */
+export function payloadBytes(p: Ipv4Packet): Uint8Array {
+  if (p.payload.kind === 'raw') return p.payload.bytes;
+  const w = new ByteWriter(p.totalLength);
+  encodeIcmp(w, p.payload);
+  return w.toBytes();
+}
+
+/** Largest fragment payload that fits `mtu`: what is left after the header, rounded down to
+ * a multiple of 8 (the offset field counts 8-byte units). */
+export function maxFragmentData(mtu: number, ihl = 5): number {
+  return Math.floor((mtu - ihl * 4) / 8) * 8;
+}
+
+/**
+ * RFC 791 fragmentation. Each fragment repeats the header (same Identification), carries a
+ * slice of the payload, sets MF on all but the last piece and records its position in
+ * 8-byte units. Works for already-fragmented datagrams too (offsets are relative to the
+ * original, and the last sub-piece keeps the original's MF bit).
+ */
+export function fragment(p: Ipv4Packet, mtu: number): Ipv4Packet[] {
+  if (p.totalLength <= mtu) return [p];
+  const hdr = p.ihl * 4;
+  const per = maxFragmentData(mtu, p.ihl);
+  if (per < 8) throw new Error(`MTU ${mtu} is too small to fragment into`);
+  const data = payloadBytes(p);
+  const out: Ipv4Packet[] = [];
+  for (let off = 0; off < data.length; off += per) {
+    const chunk = data.slice(off, off + per);
+    const last = off + per >= data.length;
+    const mf = !last || (p.flags & IPV4_FLAG_MF) !== 0;
+    const frag: Ipv4Packet = {
+      ...p,
+      totalLength: hdr + chunk.length,
+      flags: (p.flags & ~IPV4_FLAG_MF) | (mf ? IPV4_FLAG_MF : 0),
+      fragmentOffset: p.fragmentOffset + off / 8,
+      payload: { kind: 'raw', bytes: chunk },
+      checksum: 0,
+    };
+    frag.checksum = computeIpv4Checksum(frag);
+    out.push(frag);
+  }
+  return out;
+}
+
+/** Decode upper-layer bytes of a reassembled datagram. */
+export function decodePayload(protocol: number, bytes: Uint8Array): Ipv4Payload {
+  return protocol === IPPROTO_ICMP ? decodeIcmp(new ByteReader(bytes)) : { kind: 'raw', bytes };
 }

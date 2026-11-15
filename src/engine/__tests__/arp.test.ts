@@ -49,14 +49,14 @@ describe('ARP', () => {
 
   it('drops the oldest queued packet when the per-destination queue overflows', () => {
     const { engine, events } = make(lanTopology(2));
-    engine.ping('h1', '10.0.0.2', { count: 5, intervalNs: 10_000 });
+    engine.ping('h1', '10.0.0.2', { count: 12, intervalNs: 10_000 });
     engine.runUntil(3 * SEC);
     expect(events.filter((e) => e.type === 'drop' && e.reason === 'queue-full')).toHaveLength(2);
-    // Seq 1 and 2 were dropped (oldest first), so they time out; 3-5 are answered.
+    // Seq 1 and 2 were dropped (oldest first; queue holds 10), so they time out; 3-12 are answered.
     const lines = appLines(events);
     expect(lines).toContain('H1 Request timeout for icmp_seq 1');
     expect(lines).toContain('H1 Request timeout for icmp_seq 2');
-    expect(lines.filter((l) => l.includes('bytes from'))).toHaveLength(3);
+    expect(lines.filter((l) => l.includes('bytes from'))).toHaveLength(10);
   });
 
   it('retries 3 times at 1 s intervals, then reports Destination Host Unreachable', () => {

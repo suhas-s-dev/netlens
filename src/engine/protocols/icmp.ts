@@ -22,7 +22,7 @@ const UNREACH_CODES: Record<number, string> = {
   1: 'Host unreachable',
   2: 'Protocol unreachable',
   3: 'Port unreachable',
-  4: 'Fragmentation needed',
+  4: 'Fragmentation needed and DF set',
   13: 'Communication administratively prohibited',
 };
 
@@ -60,7 +60,13 @@ function writeBody(w: ByteWriter, m: IcmpMessage, withSpans: boolean): void {
     f('icmp.sequence', 'Sequence number', String(m.sequence), () => w.u16(m.sequence));
     if (m.data.length) f('icmp.data', 'Data', `${m.data.length} bytes`, () => w.bytes(m.data));
   } else if (isIcmpError(m)) {
-    f('icmp.unused', 'Unused', hex(m.unused, 8), () => w.u32(m.unused));
+    if (m.type === ICMP_DEST_UNREACHABLE && m.code === 4) {
+      // RFC 1191 layout: 16 unused bits, then the next-hop MTU.
+      f('icmp.unused', 'Unused', hex(m.unused >>> 16, 4), () => w.u16(m.unused >>> 16));
+      f('icmp.mtu', 'Next-hop MTU', String(m.unused & 0xffff), () => w.u16(m.unused & 0xffff));
+    } else {
+      f('icmp.unused', 'Unused', hex(m.unused, 8), () => w.u32(m.unused));
+    }
     if (m.original.length) {
       f('icmp.original', 'Original datagram', describeOriginal(m.original), () => w.bytes(m.original));
     }
@@ -122,10 +128,12 @@ export function makeIcmpError(
   type: typeof ICMP_DEST_UNREACHABLE | typeof ICMP_TIME_EXCEEDED,
   code: number,
   originalDatagram: Uint8Array,
+  /** Rest-of-header word; for "fragmentation needed" this is the next-hop MTU (RFC 1191). */
+  unused = 0,
 ): IcmpError {
   const ihlBytes = ((originalDatagram[0] ?? 0x45) & 0x0f) * 4;
   const original = originalDatagram.slice(0, Math.min(originalDatagram.length, ihlBytes + 8));
-  const m: IcmpError = { kind: 'icmp', type, code, checksum: 0, unused: 0, original };
+  const m: IcmpError = { kind: 'icmp', type, code, checksum: 0, unused: unused >>> 0, original };
   m.checksum = computeIcmpChecksum(m);
   return m;
 }
