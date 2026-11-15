@@ -4,7 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef, type ComponentRef } from 'react';
 import * as THREE from 'three';
 import { useSim } from '../state/sim';
-import { nodePos } from './layout';
+import { nodePos, viewCenter } from './layout';
 
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>;
 
@@ -32,7 +32,7 @@ function bounds(nodes: { position: { x: number; y: number } }[]) {
 
 export function CameraRig() {
   const viewMode = useSim((s) => s.viewMode);
-  const engineGen = useSim((s) => s.engineGen);
+  const fitGen = useSim((s) => s.fitGen);
   const focus = useSim((s) => s.focus);
   const mode = useSim((s) => s.mode);
   const controls = useRef<OrbitControlsImpl>(null);
@@ -79,7 +79,7 @@ export function CameraRig() {
     camera.updateProjectionMatrix();
     c.target.copy(centre);
     c.update();
-  }, [engineGen, viewMode, camera]);
+  }, [fitGen, viewMode, camera]);
 
   useEffect(() => {
     if (!focus) return;
@@ -101,6 +101,8 @@ export function CameraRig() {
       c.update();
       if (f.t >= 1) flight.current = null;
     }
+    viewCenter.x = c.target.x;
+    viewCenter.y = c.target.z;
     // Level of detail from camera distance (perspective) or zoom (orthographic).
     let lod: 'far' | 'mid' | 'near';
     if (camera instanceof THREE.PerspectiveCamera) {

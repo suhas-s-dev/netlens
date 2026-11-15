@@ -13,3 +13,4 @@ export type { EncodedFrame } from './protocols/ethernet';
 export * from './protocols/types';
 export type * from './trace/events';
 export { generatedMac } from './topology/build';
+export { validateTopology, segmentsOf, type ValidationIssue } from './topology/validate';

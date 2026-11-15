@@ -42,12 +42,29 @@ export function linkGeometry(topo: TopologyJson): Map<string, LinkGeom> {
 }
 
 /** Port anchor position for (node, iface), if linked. */
-export function portAnchors(topo: TopologyJson, links: Map<string, LinkGeom>): Map<string, THREE.Vector3> {
+export function portAnchors(links: Map<string, LinkGeom>): Map<string, THREE.Vector3> {
   const m = new Map<string, THREE.Vector3>();
   for (const g of links.values()) {
     m.set(`${g.aNode}.${g.aIface}`, g.a);
     m.set(`${g.bNode}.${g.bIface}`, g.b);
   }
-  void topo;
   return m;
+}
+
+/** Where the camera is looking (on the ground plane); written by the camera rig each frame. */
+export const viewCenter = { x: 0, y: 0 };
+
+/** Editor: positions for interfaces that are not linked yet, in a row in front of the device. */
+export function freePortPositions(topo: TopologyJson): Map<string, THREE.Vector3> {
+  const linked = new Set(topo.links.flatMap((l) => [`${l.a.node}.${l.a.iface}`, `${l.b.node}.${l.b.iface}`]));
+  const out = new Map<string, THREE.Vector3>();
+  for (const n of topo.nodes) {
+    const free = n.interfaces.filter((i) => !linked.has(`${n.id}.${i.id}`));
+    const gap = 0.85;
+    free.forEach((i, k) => {
+      const x = (k - (free.length - 1) / 2) * gap;
+      out.set(`${n.id}.${i.id}`, nodePos(n).add(new THREE.Vector3(x, 0.3, DEVICE_RADIUS[n.type] + 0.45)));
+    });
+  }
+  return out;
 }

@@ -7,7 +7,7 @@ import { useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeJson } from '../engine';
 import { useSim } from '../state/sim';
-import { linkGeometry, nodePos, portAnchors } from './layout';
+import { freePortPositions, linkGeometry, nodePos, portAnchors } from './layout';
 
 const els = new Map<string, HTMLElement>();
 const anchors = new Map<string, THREE.Vector3>();
@@ -85,12 +85,14 @@ export function LabelsLayer() {
   const mode = useSim((s) => s.mode);
   const ports = useMemo(() => {
     const nodes = new Map(topology.nodes.map((n) => [n.id, n]));
-    return [...portAnchors(topology, linkGeometry(topology)).entries()].map(([key, p]) => {
+    const all = [...portAnchors(linkGeometry(topology)).entries()];
+    if (mode === 'edit') all.push(...freePortPositions(topology).entries());
+    return all.map(([key, p]) => {
       const [nodeId, iface] = key.split('.') as [string, string];
       const n = nodes.get(nodeId)!;
-      return { id: key, label: n.type === 'switch' ? `p${iface}` : iface, pos: p.clone().setY(p.y + 0.5) };
+      return { id: key, label: n.type === 'switch' ? `p${iface}` : iface, pos: p.clone().setY(p.y + 0.45) };
     });
-  }, [topology]);
+  }, [topology, mode]);
   return (
     <div className="labels" aria-hidden>
       {topology.nodes.map((n) => (

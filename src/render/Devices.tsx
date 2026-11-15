@@ -90,7 +90,7 @@ function Device({ node, handlers }: { node: NodeJson; handlers: DeviceHandlers }
       <group
         onClick={(e) => {
           e.stopPropagation();
-          if (mode === 'sim') setSelection({ kind: 'node', id: node.id });
+          setSelection({ kind: 'node', id: node.id });
         }}
         onDoubleClick={(e) => {
           e.stopPropagation();
@@ -126,7 +126,7 @@ function PortIndicators({ handlers }: { handlers: DeviceHandlers }) {
   const topology = useSim((s) => s.topology);
   const lod = useSim((s) => s.lod);
   const mode = useSim((s) => s.mode);
-  const anchors = useMemo(() => portAnchors(topology, linkGeometry(topology)), [topology]);
+  const anchors = useMemo(() => portAnchors(linkGeometry(topology)), [topology]);
   const refs = useRef(new Map<string, THREE.MeshStandardMaterial>());
 
   useFrame(() => {

@@ -14,6 +14,7 @@ import type { DeviceState } from '../devices/state';
 import type { Frame } from '../model/frame';
 import { encodeFrame } from '../model/frame';
 import type { TopologyJson } from '../model/topology';
+import { isValidIp } from '../protocols/addr';
 import { classifyFrame, summarizeFrame } from '../protocols/describe';
 import { wireBytes } from '../protocols/ethernet';
 import type { EthernetFrame } from '../protocols/types';
@@ -199,7 +200,8 @@ export class Engine {
 
   // ---------------------------------------------------------------- commands
 
-  private host(id: string): Host {
+  private host(id: string, dst: string): Host {
+    if (!isValidIp(dst)) throw new Error(`Invalid destination IPv4 address: ${dst}`);
     const d = this.devices.get(id);
     if (!(d instanceof Host)) throw new Error(`${id} is not a host`);
     return d;
@@ -207,15 +209,17 @@ export class Engine {
 
   /** Start a ping now. Returns the session id. */
   ping(hostId: string, dst: string, opts?: PingOptions): string {
-    return this.host(hostId).startPing(dst, opts);
+    return this.host(hostId, dst).startPing(dst, opts);
   }
 
   traceroute(hostId: string, dst: string, opts?: TracerouteOptions): string {
-    return this.host(hostId).startTraceroute(dst, opts);
+    return this.host(hostId, dst).startTraceroute(dst, opts);
   }
 
   private scheduleScenario(): void {
     for (const s of this.topology.scenario ?? []) {
+      // Skip steps that no longer make sense (e.g. the host was deleted in the editor).
+      if (!(this.devices.get(s.node) instanceof Host) || !isValidIp(s.dst)) continue;
       this.queue.push(s.at * MS, `scenario: ${s.action} ${s.node} → ${s.dst}`, () => {
         if (s.action === 'ping') {
           const o: PingOptions = {};

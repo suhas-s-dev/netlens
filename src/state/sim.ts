@@ -7,7 +7,9 @@
  * UI code never mutates the engine: it calls controller commands.
  */
 import { create } from 'zustand';
-import { Engine, MS, SEC, type DeviceState, type TopologyJson, type TraceEvent, type TxEvent } from '../engine';
+import { Engine, MS, SEC, type DeviceState, type LinkEndJson, type TopologyJson, type TraceEvent, type TxEvent } from '../engine';
+import { materializeMacs } from './editOps';
+import { autosave } from './storage';
 
 /** At 1x, this much sim time passes per wall-clock second. Links default to 2 ms, so a hop
  * takes ~0.4 s on screen. */
@@ -32,6 +34,13 @@ export interface SimStore {
   topology: TopologyJson;
   presetId: string | null;
   engineGen: number;
+  /** Bumped when the camera should re-fit the whole topology. */
+  fitGen: number;
+  /** Topology edited since the engine was built. */
+  dirty: boolean;
+  toast: { text: string; n: number } | null;
+  /** Editor: first port picked when linking port-to-port. */
+  linkStart: LinkEndJson | null;
   playing: boolean;
   speed: number;
   simTime: number;
@@ -53,12 +62,19 @@ export interface SimStore {
   setLod(l: 'far' | 'mid' | 'near'): void;
   setLogFilter(f: Partial<SimStore['logFilter']>): void;
   focusNode(id: string): void;
+  editTopology(fn: (t: TopologyJson) => TopologyJson): void;
+  showToast(text: string): void;
+  setLinkStart(e: LinkEndJson | null): void;
 }
 
 export const useSim = create<SimStore>((set, get) => ({
   topology: { version: 1, name: 'Empty', nodes: [], links: [] },
   presetId: null,
   engineGen: 0,
+  fitGen: 0,
+  dirty: false,
+  toast: null,
+  linkStart: null,
   playing: false,
   speed: 1,
   simTime: 0,
@@ -75,15 +91,42 @@ export const useSim = create<SimStore>((set, get) => ({
   setSpeed: (speed) => set({ speed: Math.min(4, Math.max(0.1, speed)) }),
   setViewMode: (viewMode) => set({ viewMode }),
   setMode: (mode) => {
-    if (mode === 'edit') sim.pause();
-    set({ mode, selection: null });
+    const s = get();
+    if (mode === s.mode) return;
+    if (mode === 'edit') {
+      sim.pause();
+      set({ mode, selection: null, topology: materializeMacs(s.topology), linkStart: null });
+      return;
+    }
+    if (s.dirty) {
+      try {
+        sim.load(s.topology, null, { fit: false });
+      } catch (e) {
+        get().showToast(`Can't simulate yet: ${e instanceof Error ? e.message : String(e)}`);
+        return;
+      }
+    }
+    set({ mode, selection: null, linkStart: null });
   },
   setLod: (lod) => {
     if (get().lod !== lod) set({ lod });
   },
   setLogFilter: (f) => set({ logFilter: { ...get().logFilter, ...f } }),
   focusNode: (nodeId) => set({ focus: { nodeId, n: (get().focus?.n ?? 0) + 1 }, selection: { kind: 'node', id: nodeId } }),
+  editTopology: (fn) => {
+    const topology = fn(get().topology);
+    set({ topology, dirty: true, presetId: null });
+    scheduleAutosave(topology);
+  },
+  showToast: (text) => set({ toast: { text, n: (get().toast?.n ?? 0) + 1 } }),
+  setLinkStart: (linkStart) => set({ linkStart }),
 }));
+
+let autosaveTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleAutosave(t: TopologyJson): void {
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => autosave(t), 500);
+}
 
 export class SimController {
   engine: Engine;
@@ -102,18 +145,22 @@ export class SimController {
   }
 
   /** (Re)build the engine from a topology; resets sim time to 0. */
-  load(topology: TopologyJson, presetId: string | null = useSim.getState().presetId, runScenario = true): void {
+  load(topology: TopologyJson, presetId: string | null = useSim.getState().presetId, opts: { fit?: boolean; runScenario?: boolean } = {}): void {
+    // Build first: if the topology cannot be instantiated, keep the current engine.
+    const engine = new Engine(topology, { runScenario: opts.runScenario ?? true });
     this.unsubscribe();
     this.inFlight.clear();
     this.packets.clear();
     this.linkActivity.clear();
     this.pending = [];
-    this.engine = new Engine(topology, { runScenario });
+    this.engine = engine;
     this.unsubscribe = this.engine.on((e) => this.onEvent(e));
     useSim.setState((s) => ({
       topology,
       presetId,
       engineGen: s.engineGen + 1,
+      fitGen: opts.fit === false ? s.fitGen : s.fitGen + 1,
+      dirty: false,
       simTime: 0,
       version: s.version + 1,
       log: [],
@@ -124,7 +171,7 @@ export class SimController {
   }
 
   reset(): void {
-    this.load(useSim.getState().topology);
+    this.load(useSim.getState().topology, undefined, { fit: false });
   }
 
   private onEvent(e: TraceEvent): void {
@@ -204,13 +251,20 @@ export class SimController {
   // ---- commands (all user actions go through here)
 
   ping(hostId: string, dst: string, count = 4): void {
-    this.engine.ping(hostId, dst, { count });
-    this.flush();
-    this.play();
+    this.command(() => this.engine.ping(hostId, dst, { count }));
   }
 
   traceroute(hostId: string, dst: string): void {
-    this.engine.traceroute(hostId, dst);
+    this.command(() => this.engine.traceroute(hostId, dst));
+  }
+
+  private command(run: () => void): void {
+    try {
+      run();
+    } catch (e) {
+      useSim.getState().showToast(e instanceof Error ? e.message : String(e));
+      return;
+    }
     this.flush();
     this.play();
   }
