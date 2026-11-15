@@ -67,7 +67,9 @@ export type ScenarioStep =
   | { at: number; action: 'ping'; node: string; dst: string; count?: number; intervalMs?: number; ttl?: number; size?: number; df?: boolean }
   | { at: number; action: 'traceroute'; node: string; dst: string; maxHops?: number }
   | { at: number; action: 'pmtud'; node: string; dst: string }
-  | { at: number; action: 'mtr'; node: string; dst: string; rounds?: number };
+  | { at: number; action: 'mtr'; node: string; dst: string; rounds?: number }
+  | { at: number; action: 'tcp'; node: string; dst: string; port?: number; bytes?: number }
+  | { at: number; action: 'udp'; node: string; dst: string; port?: number; count?: number; size?: number };
 
 export interface TopologyJson {
   version: 1;

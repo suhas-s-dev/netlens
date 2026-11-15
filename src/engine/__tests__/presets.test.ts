@@ -3,6 +3,7 @@ import routerChain from '../../presets/router-chain.json';
 import singleLan from '../../presets/single-lan.json';
 import twoLans from '../../presets/two-lans.json';
 import mtuBottleneck from '../../presets/mtu-bottleneck.json';
+import tcpUdp from '../../presets/tcp-udp.json';
 import { SEC } from '../core/time';
 import type { TopologyJson } from '../model/topology';
 import { validateTopology } from '../topology/validate';
@@ -13,6 +14,7 @@ const presets: [string, TopologyJson][] = [
   ['two-lans', twoLans as TopologyJson],
   ['router-chain', routerChain as TopologyJson],
   ['mtu-bottleneck', mtuBottleneck as TopologyJson],
+  ['tcp-udp', tcpUdp as TopologyJson],
 ];
 
 function run(t: TopologyJson) {

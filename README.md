@@ -30,8 +30,8 @@ Pixel-art 3D: three.js's `RenderPixelatedPass` (no extra dependency) renders the
 
 ## Using it
 
-- **Presets** (top bar): *Single LAN*, *Two LANs + router*, *Three-router chain*, *MTU bottleneck*. Each preset has a short scripted scenario that starts when you press Play.
-- **Tools** (left panel): Ping (count, data size, Don't Fragment), Traceroute, MTR (rounds of per-hop loss/latency) and PMTUD (tracepath-style path-MTU discovery).
+- **Presets** (top bar): *Single LAN*, *Two LANs + router*, *Three-router chain*, *MTU bottleneck*, *TCP & UDP*. Each preset has a short scripted scenario that starts when you press Play.
+- **Tools** (left panel): Ping (count, data size, Don't Fragment), Traceroute, MTR (rounds of per-hop loss/latency), PMTUD (tracepath-style path-MTU discovery), TCP (connect to any port and download N bytes; every host runs a web server on port 80) and UDP (datagrams to any port; every host runs an echo service on port 7).
 - **Time:** `Space` plays or pauses. `.` or `→` steps to the next event. The slider sets speed from 0.1x to 4x. At 1x, 5 ms of sim time passes per wall-clock second, so a 2 ms hop takes about 0.4 s on screen. When nothing is on the wire, time runs faster (1 s of sim time per second), and short idle gaps are skipped.
 - **Detail by distance:** zoomed out shows device names and IPs. Closer in, port indicators and link flashes appear. Closest, port labels and gateways appear. Click a device to see its live tables (ARP, MAC, routes). Rows flash when added, used or refreshed, and turn red when they age out. Double-click a device to fly to it.
 - **Packets:** colour shows the protocol: amber ARP, blue echo request, green echo reply, red ICMP error. Streak length is the frame's serialization time. Clicking a packet pauses the sim and opens the inspector: collapsible layers, a hex dump, field ↔ byte hover highlighting, and the packet's flow hop by hop.
@@ -72,6 +72,13 @@ worker/              Cloudflare Worker entry (static assets; /api/* reserved)
   - Hosts and routers fragment oversized packets into 8-byte-aligned slices, keeping the same Identification and setting MF/offset. Fragments of fragments keep offsets relative to the original.
   - Only the destination reassembles, with a 30 s timeout that sends ICMP Time Exceeded code 1.
   - When DF is set, a router drops the packet and replies "Fragmentation Needed" with the next-hop MTU. Hosts cache the path MTU for 10 minutes.
+- **UDP (RFC 768):** pseudo-header checksum, echo service on port 7, ICMP Port Unreachable for closed ports. Large datagrams are fragmented by IP.
+- **TCP (RFC 9293):**
+  - The full state machine: handshake, MSS option, FIN teardown with TIME_WAIT (MSL shortened to 2 s so you can watch it), RST for closed ports.
+  - Data is segmented by MSS, and the peer's window limits how much can be in flight. ACKs are cumulative and piggybacked on data.
+  - Lost data is resent on a retransmission timer (RTT-based RTO per RFC 6298, 200 ms minimum, doubling on each timeout, Karn's rule) or after 3 duplicate ACKs (fast retransmit, RFC 5681).
+  - Every segment has DF set, so ICMP Fragmentation Needed lowers the MSS (PMTUD).
+  - Simplified: no congestion window, no delayed ACKs, out-of-order segments are dropped (answered with a duplicate ACK), go-back-N retransmission.
 - **Link loss:** a per-link loss percentage drawn from the seeded RNG, so lossy runs are reproducible.
 
 - **Timing:** serialization delay counts preamble, SFD, FCS and the inter-frame gap. Links are full duplex. Each port has a FIFO transmit queue (64 frames, tail drop).

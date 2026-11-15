@@ -968,6 +968,1255 @@ exports[`preset single-lan > produces an identical trace on every run (snapshot)
    2516.582400ms app      H2 --- 10.0.0.10 ping statistics --- 1 packets transmitted, 1 received, 0% packet loss, rtt min/avg/max = 16.582/16.582/16.582 ms"
 `;
 
+exports[`preset tcp-udp > produces an identical trace on every run (snapshot) > tcp-udp 1`] = `
+"      0.000000ms app      H1 TCP connect to 10.0.2.80:80 (then ask for 4000 bytes)
+      0.000000ms table    H1 opens a connection to 10.0.2.80:80 from port 49555 [CLOSED → SYN_SENT]
+      0.000000ms decision H1 sends SYN to 10.0.2.80:80: seq=0 (ISN 1207330352), MSS 1460
+      0.000000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+      0.000000ms table    H1 has no ARP entry for 10.0.1.1; queuing packet and resolving
+      0.000000ms decision H1 broadcasting ARP request: who has 10.0.1.1? tell 10.0.1.10 (attempt 1/3)
+      0.000000ms tx       H1 eth0 → SW1 port 1: ARP Who has 10.0.1.1? Tell 10.0.1.10 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+      2.067200ms table    SW1 learned 02:00:00:00:01:01 on port 1
+      2.067200ms decision SW1 flooding broadcast frame out port 4
+      2.067200ms tx       SW1 port 4 → R1 eth0: ARP Who has 10.0.1.1? Tell 10.0.1.10 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+      4.134400ms table    R1 learned 10.0.1.10 is at 02:00:00:00:01:01 (from ARP request)
+      4.134400ms decision R1 replying to ARP: 10.0.1.1 is at 02:00:00:00:03:01
+      4.134400ms tx       R1 eth0 → SW1 port 4: ARP 10.0.1.1 is at 02:00:00:00:03:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+      6.201600ms table    SW1 learned 02:00:00:00:03:01 on port 4
+      6.201600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+      6.201600ms decision SW1 forwarding ARP 10.0.1.1 is at 02:00:00:00:03:01 to 02:00:00:00:01:01 out port 1
+      6.201600ms tx       SW1 port 1 → H1 eth0: ARP 10.0.1.1 is at 02:00:00:00:03:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+      8.268800ms table    H1 learned 10.0.1.1 is at 02:00:00:00:03:01 (from ARP reply)
+      8.268800ms decision H1 resolved 10.0.1.1 → 02:00:00:00:03:01; sending 1 queued packet(s)
+      8.268800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [SYN] seq=1207330352 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     10.336000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     10.336000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     10.336000ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [SYN] seq=1207330352 win=65535 len=0 MSS=1460 to 02:00:00:00:03:01 out port 4
+     10.336000ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [SYN] seq=1207330352 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     12.403200ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     12.403200ms decision R1 TTL 64 → 63, header checksum 0x387e → 0x397e
+     12.403200ms decision R1 10.0.2.80 is directly connected on eth1
+     12.403200ms table    R1 has no ARP entry for 10.0.2.80; queuing packet and resolving
+     12.403200ms decision R1 broadcasting ARP request: who has 10.0.2.80? tell 10.0.2.1 (attempt 1/3)
+     12.403200ms tx       R1 eth1 → SW2 port 4: ARP Who has 10.0.2.80? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     14.470400ms table    SW2 learned 02:00:00:00:03:02 on port 4
+     14.470400ms decision SW2 flooding broadcast frame out ports 1,2
+     14.470400ms tx       SW2 port 1 → WEB eth0: ARP Who has 10.0.2.80? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     14.470400ms tx       SW2 port 2 → FLAKY eth0: ARP Who has 10.0.2.80? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     16.537600ms table    WEB learned 10.0.2.1 is at 02:00:00:00:03:02 (from ARP request)
+     16.537600ms decision WEB replying to ARP: 10.0.2.80 is at 02:00:00:00:05:01
+     16.537600ms tx       WEB eth0 → SW2 port 1: ARP 10.0.2.80 is at 02:00:00:00:05:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     16.537600ms drop     FLAKY ignored ARP request for 10.0.2.80 (not its address on eth0)
+     18.604800ms table    SW2 learned 02:00:00:00:05:01 on port 1
+     18.604800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     18.604800ms decision SW2 forwarding ARP 10.0.2.80 is at 02:00:00:00:05:01 to 02:00:00:00:03:02 out port 4
+     18.604800ms tx       SW2 port 4 → R1 eth1: ARP 10.0.2.80 is at 02:00:00:00:05:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     20.672000ms table    R1 learned 10.0.2.80 is at 02:00:00:00:05:01 (from ARP reply)
+     20.672000ms decision R1 resolved 10.0.2.80 → 02:00:00:00:05:01; sending 1 queued packet(s)
+     20.672000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [SYN] seq=1207330352 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     22.739200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     22.739200ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     22.739200ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [SYN] seq=1207330352 win=65535 len=0 MSS=1460 to 02:00:00:00:05:01 out port 1
+     22.739200ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [SYN] seq=1207330352 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     24.806400ms table    WEB port 80 accepts a SYN from 10.0.1.10:49555 (their MSS 1460) [CLOSED → SYN_RCVD]
+     24.806400ms decision WEB sends SYN-ACK to 10.0.1.10:49555: seq=0 (ISN 3095568220), ack=1, MSS 1460
+     24.806400ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     24.806400ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     24.806400ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, SYN] seq=3095568220 ack=1207330353 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     26.873600ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+     26.873600ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     26.873600ms decision SW2 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, SYN] seq=3095568220 ack=1207330353 win=65535 len=0 MSS=1460 to 02:00:00:00:03:02 out port 4
+     26.873600ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, SYN] seq=3095568220 ack=1207330353 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     28.940800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+     28.940800ms decision R1 TTL 64 → 63, header checksum 0x5e86 → 0x5f86
+     28.940800ms decision R1 10.0.1.10 is directly connected on eth0
+     28.940800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     28.940800ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, SYN] seq=3095568220 ack=1207330353 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     31.008000ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+     31.008000ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+     31.008000ms decision SW1 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, SYN] seq=3095568220 ack=1207330353 win=65535 len=0 MSS=1460 to 02:00:00:00:01:01 out port 1
+     31.008000ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, SYN] seq=3095568220 ack=1207330353 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     33.075200ms table    H1 got SYN-ACK from 10.0.2.80: handshake step 3, connection established (MSS 1460) [SYN_SENT → ESTABLISHED]
+     33.075200ms decision H1 sends ACK ack=1 (third step of the handshake)
+     33.075200ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     33.075200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     33.075200ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330353 ack=3095568221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     33.075200ms app      H1 connected in 33.075 ms (3-way handshake done, MSS 1460)
+     33.075200ms app      H1 request GET /bytes/4000 (45 bytes)
+     33.075200ms decision H1 sends 45 bytes to 10.0.2.80:80: seq=1 (bytes 1–45), MSS 1460
+     33.075200ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     33.075200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     33.142400ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, PSH] seq=1207330353 ack=3095568221 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+     35.142400ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     35.142400ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     35.142400ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330353 ack=3095568221 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+     35.142400ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330353 ack=3095568221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     35.240800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     35.240800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     35.240800ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, PSH] seq=1207330353 ack=3095568221 win=65535 len=45 to 02:00:00:00:03:01 out port 4
+     35.240800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, PSH] seq=1207330353 ack=3095568221 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+     37.209600ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     37.209600ms decision R1 TTL 64 → 63, header checksum 0x3881 → 0x3981
+     37.209600ms decision R1 10.0.2.80 is directly connected on eth1
+     37.209600ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     37.209600ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330353 ack=3095568221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     37.339200ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     37.339200ms decision R1 TTL 64 → 63, header checksum 0x3853 → 0x3953
+     37.339200ms decision R1 10.0.2.80 is directly connected on eth1
+     37.339200ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     37.339200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, PSH] seq=1207330353 ack=3095568221 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+     39.276800ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     39.276800ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     39.276800ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330353 ack=3095568221 win=65535 len=0 to 02:00:00:00:05:01 out port 1
+     39.276800ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330353 ack=3095568221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     39.437600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     39.437600ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     39.437600ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, PSH] seq=1207330353 ack=3095568221 win=65535 len=45 to 02:00:00:00:05:01 out port 1
+     39.437600ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, PSH] seq=1207330353 ack=3095568221 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+     41.344000ms table    WEB got the final ACK of the handshake from 10.0.1.10: connection established (MSS 1460) [SYN_RCVD → ESTABLISHED]
+     41.536000ms decision WEB web server (port 80) got "GET /bytes/4000 HTTP/1.0": sending a 4000-byte response, then closing
+     41.536000ms decision WEB sends 1460 bytes to 10.0.1.10:49555: seq=1 (bytes 1–1460), MSS 1460
+     41.536000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     41.536000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     41.536000ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095568221 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     41.536000ms decision WEB sends 1460 bytes to 10.0.1.10:49555: seq=1461 (bytes 1461–2920), MSS 1460
+     41.536000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     41.536000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     41.536000ms decision WEB sends 1080 bytes to 10.0.1.10:49555: seq=2921 (bytes 2921–4000), MSS 1460
+     41.536000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     41.536000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     41.536000ms decision WEB sends FIN to 10.0.1.10:49555: seq=4001, nothing more to send
+     41.536000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     41.536000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     41.536000ms table    WEB has sent everything and closes its side [ESTABLISHED → FIN_WAIT_1]
+     42.766400ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095569681 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     43.996800ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, PSH] seq=3095571141 ack=1207330398 win=65535 len=1080 [1134 B, 926.4 µs serialization + 2.000 ms propagation]
+     44.766400ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+     44.766400ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     44.766400ms decision SW2 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095568221 ack=1207330398 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+     44.766400ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095568221 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     44.923200ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, FIN] seq=3095572221 ack=1207330398 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     45.996800ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+     45.996800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     45.996800ms decision SW2 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095569681 ack=1207330398 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+     45.996800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095569681 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     46.923200ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+     46.923200ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     46.923200ms decision SW2 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, PSH] seq=3095571141 ack=1207330398 win=65535 len=1080 to 02:00:00:00:03:02 out port 4
+     46.990400ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+     46.990400ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     46.990400ms decision SW2 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, FIN] seq=3095572221 ack=1207330398 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+     47.227200ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, PSH] seq=3095571141 ack=1207330398 win=65535 len=1080 [1134 B, 926.4 µs serialization + 2.000 ms propagation]
+     47.996800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+     47.996800ms decision R1 TTL 64 → 63, header checksum 0x58d5 → 0x59d5
+     47.996800ms decision R1 10.0.1.10 is directly connected on eth0
+     47.996800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     47.996800ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095568221 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     48.153600ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, FIN] seq=3095572221 ack=1207330398 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     49.227200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+     49.227200ms decision R1 TTL 64 → 63, header checksum 0x58d4 → 0x59d4
+     49.227200ms decision R1 10.0.1.10 is directly connected on eth0
+     49.227200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     49.227200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095569681 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     50.153600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+     50.153600ms decision R1 TTL 64 → 63, header checksum 0x5a4f → 0x5b4f
+     50.153600ms decision R1 10.0.1.10 is directly connected on eth0
+     50.153600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     50.220800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+     50.220800ms decision R1 TTL 64 → 63, header checksum 0x5e86 → 0x5f86
+     50.220800ms decision R1 10.0.1.10 is directly connected on eth0
+     50.220800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     50.457600ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, PSH] seq=3095571141 ack=1207330398 win=65535 len=1080 [1134 B, 926.4 µs serialization + 2.000 ms propagation]
+     51.227200ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+     51.227200ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+     51.227200ms decision SW1 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095568221 ack=1207330398 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+     51.227200ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095568221 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     51.384000ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, FIN] seq=3095572221 ack=1207330398 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     52.457600ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+     52.457600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+     52.457600ms decision SW1 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095569681 ack=1207330398 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+     52.457600ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095569681 ack=1207330398 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+     53.384000ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+     53.384000ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+     53.384000ms decision SW1 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, PSH] seq=3095571141 ack=1207330398 win=65535 len=1080 to 02:00:00:00:01:01 out port 1
+     53.451200ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+     53.451200ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+     53.451200ms decision SW1 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, FIN] seq=3095572221 ack=1207330398 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+     53.688000ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, PSH] seq=3095571141 ack=1207330398 win=65535 len=1080 [1134 B, 926.4 µs serialization + 2.000 ms propagation]
+     54.457600ms decision H1 got ACK 46: 45 more byte(s) confirmed received
+     54.457600ms decision H1 sends ACK ack=1461 (received 1460 bytes, next expected byte 1461)
+     54.457600ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     54.457600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     54.457600ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095569681 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     54.614400ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK, FIN] seq=3095572221 ack=1207330398 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     55.688000ms decision H1 sends ACK ack=2921 (received 1460 bytes, next expected byte 2921)
+     55.688000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     55.688000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     55.688000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095571141 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     56.524800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     56.524800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     56.524800ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095569681 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+     56.524800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095569681 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     56.614400ms decision H1 sends ACK ack=4001 (received 1080 bytes, next expected byte 4001)
+     56.614400ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     56.614400ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     56.614400ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     56.681600ms table    H1 received FIN from 10.0.2.80: the other side is done sending [ESTABLISHED → CLOSE_WAIT]
+     56.681600ms decision H1 sends ACK ack=4002 (acknowledging their FIN)
+     56.681600ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     56.681600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     56.681600ms app      H1 server closed after sending 4000 bytes in 3 segments; closing our side
+     56.681600ms decision H1 sends FIN to 10.0.2.80:80: seq=46, nothing more to send
+     56.681600ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+     56.681600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+     56.681600ms table    H1 closes its side too [CLOSE_WAIT → LAST_ACK]
+     56.681600ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     56.748800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, FIN] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     57.755200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     57.755200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     57.755200ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095571141 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+     57.755200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095571141 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     58.592000ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     58.592000ms decision R1 TTL 64 → 63, header checksum 0x387f → 0x397f
+     58.592000ms decision R1 10.0.2.80 is directly connected on eth1
+     58.592000ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     58.592000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095569681 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     58.681600ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     58.681600ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     58.681600ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572221 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+     58.681600ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     58.748800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     58.748800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     58.748800ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572222 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+     58.748800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     58.816000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+     58.816000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+     58.816000ms decision SW1 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, FIN] seq=1207330398 ack=3095572222 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+     58.816000ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, FIN] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     59.822400ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     59.822400ms decision R1 TTL 64 → 63, header checksum 0x387e → 0x397e
+     59.822400ms decision R1 10.0.2.80 is directly connected on eth1
+     59.822400ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     59.822400ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095571141 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     60.659200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     60.659200ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     60.659200ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095569681 win=65535 len=0 to 02:00:00:00:05:01 out port 1
+     60.659200ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095569681 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     60.748800ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     60.748800ms decision R1 TTL 64 → 63, header checksum 0x387d → 0x397d
+     60.748800ms decision R1 10.0.2.80 is directly connected on eth1
+     60.748800ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     60.748800ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     60.816000ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     60.816000ms decision R1 TTL 64 → 63, header checksum 0x387c → 0x397c
+     60.816000ms decision R1 10.0.2.80 is directly connected on eth1
+     60.816000ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     60.816000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     60.883200ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+     60.883200ms decision R1 TTL 64 → 63, header checksum 0x387b → 0x397b
+     60.883200ms decision R1 10.0.2.80 is directly connected on eth1
+     60.883200ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+     60.883200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, FIN] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     61.889600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     61.889600ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     61.889600ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095571141 win=65535 len=0 to 02:00:00:00:05:01 out port 1
+     61.889600ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095571141 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     62.726400ms decision WEB got ACK 1461: 1460 more byte(s) confirmed received
+     62.816000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     62.816000ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     62.816000ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572221 win=65535 len=0 to 02:00:00:00:05:01 out port 1
+     62.816000ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572221 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     62.883200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     62.883200ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     62.883200ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572222 win=65535 len=0 to 02:00:00:00:05:01 out port 1
+     62.883200ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     62.950400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+     62.950400ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+     62.950400ms decision SW2 forwarding TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, FIN] seq=1207330398 ack=3095572222 win=65535 len=0 to 02:00:00:00:05:01 out port 1
+     62.950400ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49555 → 10.0.2.80:80 [ACK, FIN] seq=1207330398 ack=3095572222 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     63.956800ms decision WEB got ACK 2921: 1460 more byte(s) confirmed received
+     64.883200ms decision WEB got ACK 4001: 1080 more byte(s) confirmed received
+     64.950400ms table    WEB's FIN was acknowledged; waiting for 10.0.1.10 to close its side [FIN_WAIT_1 → FIN_WAIT_2]
+     65.017600ms decision WEB sends ACK ack=47 (acknowledging their FIN)
+     65.017600ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+     65.017600ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+     65.017600ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095572222 ack=1207330399 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     65.017600ms table    WEB waits 2×MSL (4 s here) in case its last ACK was lost [FIN_WAIT_2 → TIME_WAIT]
+     67.084800ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+     67.084800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+     67.084800ms decision SW2 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095572222 ack=1207330399 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+     67.084800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095572222 ack=1207330399 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     69.152000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+     69.152000ms decision R1 TTL 64 → 63, header checksum 0x5e85 → 0x5f85
+     69.152000ms decision R1 10.0.1.10 is directly connected on eth0
+     69.152000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+     69.152000ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095572222 ack=1207330399 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     71.219200ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+     71.219200ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+     71.219200ms decision SW1 forwarding TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095572222 ack=1207330399 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+     71.219200ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:80 → 10.0.1.10:49555 [ACK] seq=3095572222 ack=1207330399 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+     73.286400ms table    H1's FIN was acknowledged: connection closed [LAST_ACK → CLOSED]
+     73.286400ms app      H1 done: 4000 bytes in 73.286 ms (we retransmitted 0×)
+   2500.000000ms app      H1 TCP connect to 10.0.2.80:22 (then ask for 4000 bytes)
+   2500.000000ms table    H1 opens a connection to 10.0.2.80:22 from port 49556 [CLOSED → SYN_SENT]
+   2500.000000ms decision H1 sends SYN to 10.0.2.80:22: seq=0 (ISN 1828783984), MSS 1460
+   2500.000000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   2500.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   2500.000000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49556 → 10.0.2.80:22 [SYN] seq=1828783984 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2502.067200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   2502.067200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   2502.067200ms decision SW1 forwarding TCP 10.0.1.10:49556 → 10.0.2.80:22 [SYN] seq=1828783984 win=65535 len=0 MSS=1460 to 02:00:00:00:03:01 out port 4
+   2502.067200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49556 → 10.0.2.80:22 [SYN] seq=1828783984 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2504.134400ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   2504.134400ms decision R1 TTL 64 → 63, header checksum 0x3876 → 0x3976
+   2504.134400ms decision R1 10.0.2.80 is directly connected on eth1
+   2504.134400ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   2504.134400ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49556 → 10.0.2.80:22 [SYN] seq=1828783984 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2506.201600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   2506.201600ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   2506.201600ms decision SW2 forwarding TCP 10.0.1.10:49556 → 10.0.2.80:22 [SYN] seq=1828783984 win=65535 len=0 MSS=1460 to 02:00:00:00:05:01 out port 1
+   2506.201600ms tx       SW2 port 1 → WEB eth0: TCP 10.0.1.10:49556 → 10.0.2.80:22 [SYN] seq=1828783984 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2508.268800ms drop     WEB: nothing listens on TCP port 22; answering with RST
+   2508.268800ms decision WEB sends RST to 10.0.1.10:49556: port 22 is closed
+   2508.268800ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   2508.268800ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   2508.268800ms tx       WEB eth0 → SW2 port 1: TCP 10.0.2.80:22 → 10.0.1.10:49556 [ACK, RST] seq=0 ack=1828783985 win=0 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2510.336000ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   2510.336000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   2510.336000ms decision SW2 forwarding TCP 10.0.2.80:22 → 10.0.1.10:49556 [ACK, RST] seq=0 ack=1828783985 win=0 len=0 to 02:00:00:00:03:02 out port 4
+   2510.336000ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.80:22 → 10.0.1.10:49556 [ACK, RST] seq=0 ack=1828783985 win=0 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2512.403200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   2512.403200ms decision R1 TTL 64 → 63, header checksum 0x5e84 → 0x5f84
+   2512.403200ms decision R1 10.0.1.10 is directly connected on eth0
+   2512.403200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   2512.403200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.80:22 → 10.0.1.10:49556 [ACK, RST] seq=0 ack=1828783985 win=0 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2514.470400ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   2514.470400ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   2514.470400ms decision SW1 forwarding TCP 10.0.2.80:22 → 10.0.1.10:49556 [ACK, RST] seq=0 ack=1828783985 win=0 len=0 to 02:00:00:00:01:01 out port 1
+   2514.470400ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.80:22 → 10.0.1.10:49556 [ACK, RST] seq=0 ack=1828783985 win=0 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   2516.537600ms table    H1: Connection refused: 10.0.2.80 answered RST (port 22 closed) [SYN_SENT → CLOSED]
+   2516.537600ms app      H1 Connection refused: 10.0.2.80 answered RST (port 22 closed)
+   2516.537600ms app      H1 TCP to 10.0.2.80:22 failed after 16.538 ms
+   3500.000000ms app      H1 UDP from port 50017 to 10.0.2.80:7: 2 datagram(s) of 64 bytes (no handshake, no ACKs)
+   3500.000000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   3500.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   3500.000000ms tx       H1 eth0 → SW1 port 1: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3502.104000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   3502.104000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   3502.104000ms decision SW1 forwarding UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 to 02:00:00:00:03:01 out port 4
+   3502.104000ms tx       SW1 port 4 → R1 eth0: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3504.208000ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   3504.208000ms decision R1 TTL 64 → 63, header checksum 0x783a → 0x793a
+   3504.208000ms decision R1 10.0.2.80 is directly connected on eth1
+   3504.208000ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   3504.208000ms tx       R1 eth1 → SW2 port 4: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3506.312000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   3506.312000ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   3506.312000ms decision SW2 forwarding UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 to 02:00:00:00:05:01 out port 1
+   3506.312000ms tx       SW2 port 1 → WEB eth0: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3508.416000ms decision WEB UDP echo service (port 7) sends the 64 bytes back to 10.0.1.10:50017
+   3508.416000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   3508.416000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   3508.416000ms tx       WEB eth0 → SW2 port 1: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3510.520000ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   3510.520000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   3510.520000ms decision SW2 forwarding UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 to 02:00:00:00:03:02 out port 4
+   3510.520000ms tx       SW2 port 4 → R1 eth1: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3512.624000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   3512.624000ms decision R1 TTL 64 → 63, header checksum 0x9e44 → 0x9f44
+   3512.624000ms decision R1 10.0.1.10 is directly connected on eth0
+   3512.624000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   3512.624000ms tx       R1 eth0 → SW1 port 4: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3514.728000ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   3514.728000ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   3514.728000ms decision SW1 forwarding UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 to 02:00:00:00:01:01 out port 1
+   3514.728000ms tx       SW1 port 1 → H1 eth0: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   3516.832000ms app      H1 64 bytes back from 10.0.2.80:7 seq=1 time=16.832 ms
+   4000.000000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   4000.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   4000.000000ms tx       H1 eth0 → SW1 port 1: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4002.104000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   4002.104000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   4002.104000ms decision SW1 forwarding UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 to 02:00:00:00:03:01 out port 4
+   4002.104000ms tx       SW1 port 4 → R1 eth0: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4004.208000ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   4004.208000ms decision R1 TTL 64 → 63, header checksum 0x7839 → 0x7939
+   4004.208000ms decision R1 10.0.2.80 is directly connected on eth1
+   4004.208000ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   4004.208000ms tx       R1 eth1 → SW2 port 4: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4006.312000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   4006.312000ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   4006.312000ms decision SW2 forwarding UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 to 02:00:00:00:05:01 out port 1
+   4006.312000ms tx       SW2 port 1 → WEB eth0: UDP 10.0.1.10:50017 → 10.0.2.80:7 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4008.416000ms decision WEB UDP echo service (port 7) sends the 64 bytes back to 10.0.1.10:50017
+   4008.416000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   4008.416000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   4008.416000ms tx       WEB eth0 → SW2 port 1: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4010.520000ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   4010.520000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   4010.520000ms decision SW2 forwarding UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 to 02:00:00:00:03:02 out port 4
+   4010.520000ms tx       SW2 port 4 → R1 eth1: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4012.624000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   4012.624000ms decision R1 TTL 64 → 63, header checksum 0x9e43 → 0x9f43
+   4012.624000ms decision R1 10.0.1.10 is directly connected on eth0
+   4012.624000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   4012.624000ms tx       R1 eth0 → SW1 port 4: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4014.728000ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   4014.728000ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   4014.728000ms decision SW1 forwarding UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 to 02:00:00:00:01:01 out port 1
+   4014.728000ms tx       SW1 port 1 → H1 eth0: UDP 10.0.2.80:7 → 10.0.1.10:50017 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4016.832000ms app      H1 64 bytes back from 10.0.2.80:7 seq=2 time=16.832 ms
+   4016.832000ms app      H1 UDP: 2 sent, 2 answered
+   4065.017600ms table    WEB TIME_WAIT over: connection closed [TIME_WAIT → CLOSED]
+   4500.000000ms app      H1 UDP from port 50018 to 10.0.2.80:53: 1 datagram(s) of 64 bytes (no handshake, no ACKs)
+   4500.000000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   4500.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   4500.000000ms tx       H1 eth0 → SW1 port 1: UDP 10.0.1.10:50018 → 10.0.2.80:53 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4502.104000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   4502.104000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   4502.104000ms decision SW1 forwarding UDP 10.0.1.10:50018 → 10.0.2.80:53 len=64 to 02:00:00:00:03:01 out port 4
+   4502.104000ms tx       SW1 port 4 → R1 eth0: UDP 10.0.1.10:50018 → 10.0.2.80:53 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4504.208000ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   4504.208000ms decision R1 TTL 64 → 63, header checksum 0x7838 → 0x7938
+   4504.208000ms decision R1 10.0.2.80 is directly connected on eth1
+   4504.208000ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   4504.208000ms tx       R1 eth1 → SW2 port 4: UDP 10.0.1.10:50018 → 10.0.2.80:53 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4506.312000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   4506.312000ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   4506.312000ms decision SW2 forwarding UDP 10.0.1.10:50018 → 10.0.2.80:53 len=64 to 02:00:00:00:05:01 out port 1
+   4506.312000ms tx       SW2 port 1 → WEB eth0: UDP 10.0.1.10:50018 → 10.0.2.80:53 len=64 [106 B, 104.0 µs serialization + 2.000 ms propagation]
+   4508.416000ms drop     WEB: nothing listens on UDP port 53; sending ICMP Port Unreachable to 10.0.1.10
+   4508.416000ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   4508.416000ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   4508.416000ms tx       WEB eth0 → SW2 port 1: ICMP Destination unreachable (Port unreachable) 10.0.2.80 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   4510.491200ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   4510.491200ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   4510.491200ms decision SW2 forwarding ICMP Destination unreachable (Port unreachable) 10.0.2.80 → 10.0.1.10 to 02:00:00:00:03:02 out port 4
+   4510.491200ms tx       SW2 port 4 → R1 eth1: ICMP Destination unreachable (Port unreachable) 10.0.2.80 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   4512.566400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   4512.566400ms decision R1 TTL 64 → 63, header checksum 0x9e76 → 0x9f76
+   4512.566400ms decision R1 10.0.1.10 is directly connected on eth0
+   4512.566400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   4512.566400ms tx       R1 eth0 → SW1 port 4: ICMP Destination unreachable (Port unreachable) 10.0.2.80 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   4514.641600ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   4514.641600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   4514.641600ms decision SW1 forwarding ICMP Destination unreachable (Port unreachable) 10.0.2.80 → 10.0.1.10 to 02:00:00:00:01:01 out port 1
+   4514.641600ms tx       SW1 port 1 → H1 eth0: ICMP Destination unreachable (Port unreachable) 10.0.2.80 → 10.0.1.10 [70 B, 75.2 µs serialization + 2.000 ms propagation]
+   4516.716800ms app      H1 From 10.0.2.80: port 53 unreachable (nothing listening)
+   4516.716800ms app      H1 UDP: 1 sent, 0 answered
+   5500.000000ms app      H1 UDP from port 50019 to 10.0.2.80:7: 1 datagram(s) of 3000 bytes (no handshake, no ACKs)
+   5500.000000ms decision H1: 10.0.2.80 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   5500.000000ms decision H1 3028-byte packet won't fit eth0's MTU 1500: split into 3 fragments (offsets 0, 185, 370, sizes 1500, 1500, 68 bytes)
+   5500.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   5500.000000ms tx       H1 eth0 → SW1 port 1: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5500.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   5500.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   5501.230400ms tx       H1 eth0 → SW1 port 1: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5502.460800ms tx       H1 eth0 → SW1 port 1: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5503.230400ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   5503.230400ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   5503.230400ms decision SW1 forwarding IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=0 (bytes 0–1479) MF to 02:00:00:00:03:01 out port 4
+   5503.230400ms tx       SW1 port 4 → R1 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5504.460800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   5504.460800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   5504.460800ms decision SW1 forwarding IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=185 (bytes 1480–2959) MF to 02:00:00:00:03:01 out port 4
+   5504.460800ms tx       SW1 port 4 → R1 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5504.545600ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   5504.545600ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   5504.545600ms decision SW1 forwarding IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=370 (bytes 2960–3007) to 02:00:00:00:03:01 out port 4
+   5505.691200ms tx       SW1 port 4 → R1 eth0: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5506.460800ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   5506.460800ms decision R1 TTL 64 → 63, header checksum 0x52b7 → 0x53b7
+   5506.460800ms decision R1 10.0.2.80 is directly connected on eth1
+   5506.460800ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   5506.460800ms tx       R1 eth1 → SW2 port 4: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5507.691200ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   5507.691200ms decision R1 TTL 64 → 63, header checksum 0x51fe → 0x52fe
+   5507.691200ms decision R1 10.0.2.80 is directly connected on eth1
+   5507.691200ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   5507.691200ms tx       R1 eth1 → SW2 port 4: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5507.776000ms decision R1 LPM: 10.0.2.80 matched 10.0.2.0/24 via eth1 (connected)
+   5507.776000ms decision R1 TTL 64 → 63, header checksum 0x76dd → 0x77dd
+   5507.776000ms decision R1 10.0.2.80 is directly connected on eth1
+   5507.776000ms table    R1 ARP cache hit: 10.0.2.80 is at 02:00:00:00:05:01 (eth1)
+   5508.921600ms tx       R1 eth1 → SW2 port 4: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5509.691200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   5509.691200ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   5509.691200ms decision SW2 forwarding IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=0 (bytes 0–1479) MF to 02:00:00:00:05:01 out port 1
+   5509.691200ms tx       SW2 port 1 → WEB eth0: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5510.921600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   5510.921600ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   5510.921600ms decision SW2 forwarding IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=185 (bytes 1480–2959) MF to 02:00:00:00:05:01 out port 1
+   5510.921600ms tx       SW2 port 1 → WEB eth0: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5511.006400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   5511.006400ms table    SW2 MAC table hit: 02:00:00:00:05:01 on port 1
+   5511.006400ms decision SW2 forwarding IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=370 (bytes 2960–3007) to 02:00:00:00:05:01 out port 1
+   5512.152000ms tx       SW2 port 1 → WEB eth0: IPv4 fragment 10.0.1.10 → 10.0.2.80 id=60160 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5512.921600ms decision WEB holding fragment (bytes 0–1479) of packet id=60160 from 10.0.1.10; waiting for the rest
+   5514.152000ms decision WEB holding fragment (bytes 1480–2959) of packet id=60160 from 10.0.1.10; waiting for the rest
+   5514.236800ms decision WEB reassembled 3 fragments into the original 3028-byte packet (id=60160)
+   5514.236800ms decision WEB UDP echo service (port 7) sends the 3000 bytes back to 10.0.1.10:50019
+   5514.236800ms decision WEB: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   5514.236800ms decision WEB 3028-byte packet won't fit eth0's MTU 1500: split into 3 fragments (offsets 0, 185, 370, sizes 1500, 1500, 68 bytes)
+   5514.236800ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   5514.236800ms tx       WEB eth0 → SW2 port 1: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5514.236800ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   5514.236800ms table    WEB ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   5515.467200ms tx       WEB eth0 → SW2 port 1: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5516.697600ms tx       WEB eth0 → SW2 port 1: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5517.467200ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   5517.467200ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   5517.467200ms decision SW2 forwarding IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=0 (bytes 0–1479) MF to 02:00:00:00:03:02 out port 4
+   5517.467200ms tx       SW2 port 4 → R1 eth1: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5518.697600ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   5518.697600ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   5518.697600ms decision SW2 forwarding IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=185 (bytes 1480–2959) MF to 02:00:00:00:03:02 out port 4
+   5518.697600ms tx       SW2 port 4 → R1 eth1: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5518.782400ms table    SW2 refreshed 02:00:00:00:05:01 on port 1
+   5518.782400ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   5518.782400ms decision SW2 forwarding IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=370 (bytes 2960–3007) to 02:00:00:00:03:02 out port 4
+   5519.928000ms tx       SW2 port 4 → R1 eth1: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5520.697600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   5520.697600ms decision R1 TTL 64 → 63, header checksum 0x78c1 → 0x79c1
+   5520.697600ms decision R1 10.0.1.10 is directly connected on eth0
+   5520.697600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5520.697600ms tx       R1 eth0 → SW1 port 4: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5521.928000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   5521.928000ms decision R1 TTL 64 → 63, header checksum 0x7808 → 0x7908
+   5521.928000ms decision R1 10.0.1.10 is directly connected on eth0
+   5521.928000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5521.928000ms tx       R1 eth0 → SW1 port 4: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5522.012800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   5522.012800ms decision R1 TTL 64 → 63, header checksum 0x9ce7 → 0x9de7
+   5522.012800ms decision R1 10.0.1.10 is directly connected on eth0
+   5522.012800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   5523.158400ms tx       R1 eth0 → SW1 port 4: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5523.928000ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   5523.928000ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   5523.928000ms decision SW1 forwarding IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=0 (bytes 0–1479) MF to 02:00:00:00:01:01 out port 1
+   5523.928000ms tx       SW1 port 1 → H1 eth0: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=0 (bytes 0–1479) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5525.158400ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   5525.158400ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   5525.158400ms decision SW1 forwarding IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=185 (bytes 1480–2959) MF to 02:00:00:00:01:01 out port 1
+   5525.158400ms tx       SW1 port 1 → H1 eth0: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=185 (bytes 1480–2959) MF [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   5525.243200ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   5525.243200ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   5525.243200ms decision SW1 forwarding IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=370 (bytes 2960–3007) to 02:00:00:00:01:01 out port 1
+   5526.388800ms tx       SW1 port 1 → H1 eth0: IPv4 fragment 10.0.2.80 → 10.0.1.10 id=50422 offset=370 (bytes 2960–3007) [82 B, 84.8 µs serialization + 2.000 ms propagation]
+   5527.158400ms decision H1 holding fragment (bytes 0–1479) of packet id=50422 from 10.0.2.80; waiting for the rest
+   5528.388800ms decision H1 holding fragment (bytes 1480–2959) of packet id=50422 from 10.0.2.80; waiting for the rest
+   5528.473600ms decision H1 reassembled 3 fragments into the original 3028-byte packet (id=50422)
+   5528.473600ms app      H1 3000 bytes back from 10.0.2.80:7 seq=1 time=28.474 ms
+   5528.473600ms app      H1 UDP: 1 sent, 1 answered
+   7000.000000ms app      H1 TCP connect to 10.0.2.90:80 (then ask for 8000 bytes)
+   7000.000000ms table    H1 opens a connection to 10.0.2.90:80 from port 49557 [CLOSED → SYN_SENT]
+   7000.000000ms decision H1 sends SYN to 10.0.2.90:80: seq=0 (ISN 1955374602), MSS 1460
+   7000.000000ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   7000.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   7000.000000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   7002.067200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   7002.067200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   7002.067200ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 to 02:00:00:00:03:01 out port 4
+   7002.067200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   7004.134400ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   7004.134400ms decision R1 TTL 64 → 63, header checksum 0x3867 → 0x3967
+   7004.134400ms decision R1 10.0.2.90 is directly connected on eth1
+   7004.134400ms table    R1 has no ARP entry for 10.0.2.90; queuing packet and resolving
+   7004.134400ms decision R1 broadcasting ARP request: who has 10.0.2.90? tell 10.0.2.1 (attempt 1/3)
+   7004.134400ms tx       R1 eth1 → SW2 port 4: ARP Who has 10.0.2.90? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   7006.201600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   7006.201600ms decision SW2 flooding broadcast frame out ports 1,2
+   7006.201600ms tx       SW2 port 1 → WEB eth0: ARP Who has 10.0.2.90? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   7006.201600ms tx       SW2 port 2 → FLAKY eth0: ARP Who has 10.0.2.90? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   7008.268800ms table    WEB refreshed ARP entry 10.0.2.1 → 02:00:00:00:03:02 (from ARP request)
+   7008.268800ms table    FLAKY learned 10.0.2.1 is at 02:00:00:00:03:02 (from ARP request)
+   7008.268800ms decision FLAKY replying to ARP: 10.0.2.90 is at 02:00:00:00:06:01
+   7008.268800ms tx       FLAKY eth0 → SW2 port 2: ARP 10.0.2.90 is at 02:00:00:00:06:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   7010.336000ms drop     ARP 10.0.2.90 is at 02:00:00:00:06:01 was lost on the link FLAKY → SW2 (20% loss)
+   8000.000000ms decision H1 retransmission timeout after 1000 ms: no ACK for seq=0. Resending (try 1), next timeout 2000 ms
+   8000.000000ms decision H1 sends SYN to 10.0.2.90:80: seq=0 (ISN 1955374602), MSS 1460
+   8000.000000ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8000.000000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8000.000000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8002.067200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8002.067200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8002.067200ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 to 02:00:00:00:03:01 out port 4
+   8002.067200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8004.134400ms decision R1 broadcasting ARP request: who has 10.0.2.90? tell 10.0.2.1 (attempt 2/3)
+   8004.134400ms tx       R1 eth1 → SW2 port 4: ARP Who has 10.0.2.90? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8004.134400ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8004.134400ms decision R1 TTL 64 → 63, header checksum 0x3866 → 0x3966
+   8004.134400ms decision R1 10.0.2.90 is directly connected on eth1
+   8004.134400ms decision R1 queued packet for 10.0.2.90 while ARP is pending (2 waiting)
+   8006.201600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8006.201600ms decision SW2 flooding broadcast frame out ports 1,2
+   8006.201600ms tx       SW2 port 1 → WEB eth0: ARP Who has 10.0.2.90? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8006.201600ms tx       SW2 port 2 → FLAKY eth0: ARP Who has 10.0.2.90? Tell 10.0.2.1 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8008.268800ms table    WEB refreshed ARP entry 10.0.2.1 → 02:00:00:00:03:02 (from ARP request)
+   8008.268800ms table    FLAKY refreshed ARP entry 10.0.2.1 → 02:00:00:00:03:02 (from ARP request)
+   8008.268800ms decision FLAKY replying to ARP: 10.0.2.90 is at 02:00:00:00:06:01
+   8008.268800ms tx       FLAKY eth0 → SW2 port 2: ARP 10.0.2.90 is at 02:00:00:00:06:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8010.336000ms table    SW2 learned 02:00:00:00:06:01 on port 2
+   8010.336000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8010.336000ms decision SW2 forwarding ARP 10.0.2.90 is at 02:00:00:00:06:01 to 02:00:00:00:03:02 out port 4
+   8010.336000ms tx       SW2 port 4 → R1 eth1: ARP 10.0.2.90 is at 02:00:00:00:06:01 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8012.403200ms table    R1 learned 10.0.2.90 is at 02:00:00:00:06:01 (from ARP reply)
+   8012.403200ms decision R1 resolved 10.0.2.90 → 02:00:00:00:06:01; sending 2 queued packet(s)
+   8012.403200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8012.470400ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8014.470400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8014.470400ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8014.470400ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 to 02:00:00:00:06:01 out port 2
+   8014.470400ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8014.537600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8014.537600ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8014.537600ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 to 02:00:00:00:06:01 out port 2
+   8014.537600ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8016.537600ms drop     TCP 10.0.1.10:49557 → 10.0.2.90:80 [SYN] seq=1955374602 win=65535 len=0 MSS=1460 was lost on the link SW2 → FLAKY (20% loss)
+   8016.604800ms table    FLAKY port 80 accepts a SYN from 10.0.1.10:49557 (their MSS 1460) [CLOSED → SYN_RCVD]
+   8016.604800ms decision FLAKY sends SYN-ACK to 10.0.1.10:49557: seq=0 (ISN 289351446), ack=1, MSS 1460
+   8016.604800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8016.604800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8016.604800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, SYN] seq=289351446 ack=1955374603 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8018.672000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8018.672000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8018.672000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, SYN] seq=289351446 ack=1955374603 win=65535 len=0 MSS=1460 to 02:00:00:00:03:02 out port 4
+   8018.672000ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, SYN] seq=289351446 ack=1955374603 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8020.739200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8020.739200ms decision R1 TTL 64 → 63, header checksum 0xfb6a → 0xfc6a
+   8020.739200ms decision R1 10.0.1.10 is directly connected on eth0
+   8020.739200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8020.739200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, SYN] seq=289351446 ack=1955374603 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8022.806400ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8022.806400ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8022.806400ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, SYN] seq=289351446 ack=1955374603 win=65535 len=0 MSS=1460 to 02:00:00:00:01:01 out port 1
+   8022.806400ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, SYN] seq=289351446 ack=1955374603 win=65535 len=0 MSS=1460 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8024.873600ms table    H1 got SYN-ACK from 10.0.2.90: handshake step 3, connection established (MSS 1460) [SYN_SENT → ESTABLISHED]
+   8024.873600ms decision H1 sends ACK ack=1 (third step of the handshake)
+   8024.873600ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8024.873600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8024.873600ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374603 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8024.873600ms app      H1 connected in 1024.874 ms (3-way handshake done, MSS 1460)
+   8024.873600ms app      H1 request GET /bytes/8000 (45 bytes)
+   8024.873600ms decision H1 sends 45 bytes to 10.0.2.90:80: seq=1 (bytes 1–45), MSS 1460
+   8024.873600ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8024.873600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8024.940800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, PSH] seq=1955374603 ack=289351447 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+   8026.940800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8026.940800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8026.940800ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374603 ack=289351447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8026.940800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374603 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8027.039200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8027.039200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8027.039200ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, PSH] seq=1955374603 ack=289351447 win=65535 len=45 to 02:00:00:00:03:01 out port 4
+   8027.039200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, PSH] seq=1955374603 ack=289351447 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+   8029.008000ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8029.008000ms decision R1 TTL 64 → 63, header checksum 0x3869 → 0x3969
+   8029.008000ms decision R1 10.0.2.90 is directly connected on eth1
+   8029.008000ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8029.008000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374603 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8029.137600ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8029.137600ms decision R1 TTL 64 → 63, header checksum 0x383b → 0x393b
+   8029.137600ms decision R1 10.0.2.90 is directly connected on eth1
+   8029.137600ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8029.137600ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, PSH] seq=1955374603 ack=289351447 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+   8031.075200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8031.075200ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8031.075200ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374603 ack=289351447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8031.075200ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374603 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8031.236000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8031.236000ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8031.236000ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, PSH] seq=1955374603 ack=289351447 win=65535 len=45 to 02:00:00:00:06:01 out port 2
+   8031.236000ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, PSH] seq=1955374603 ack=289351447 win=65535 len=45 [99 B, 98.4 µs serialization + 2.000 ms propagation]
+   8033.142400ms table    FLAKY got the final ACK of the handshake from 10.0.1.10: connection established (MSS 1460) [SYN_RCVD → ESTABLISHED]
+   8033.334400ms decision FLAKY web server (port 80) got "GET /bytes/8000 HTTP/1.0": sending a 8000-byte response, then closing
+   8033.334400ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=1 (bytes 1–1460), MSS 1460
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8033.334400ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=1461 (bytes 1461–2920), MSS 1460
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=2921 (bytes 2921–4380), MSS 1460
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=4381 (bytes 4381–5840), MSS 1460
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=5841 (bytes 5841–7300), MSS 1460
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms decision FLAKY sends 700 bytes to 10.0.1.10:49557: seq=7301 (bytes 7301–8000), MSS 1460
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms decision FLAKY sends FIN to 10.0.1.10:49557: seq=8001, nothing more to send
+   8033.334400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8033.334400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8033.334400ms table    FLAKY has sent everything and closes its side [ESTABLISHED → FIN_WAIT_1]
+   8034.564800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8035.795200ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8036.564800ms drop     TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 was lost on the link FLAKY → SW2 (20% loss)
+   8037.025600ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8037.795200ms drop     TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 was lost on the link FLAKY → SW2 (20% loss)
+   8038.256000ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8039.025600ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8039.025600ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8039.025600ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8039.025600ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8039.486400ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8040.108800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8040.256000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8040.256000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8040.256000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8040.256000ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8041.486400ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8041.486400ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8041.486400ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8041.486400ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8042.108800ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8042.108800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8042.108800ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 to 02:00:00:00:03:02 out port 4
+   8042.176000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8042.176000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8042.176000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+   8042.256000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8042.256000ms decision R1 TTL 64 → 63, header checksum 0xf5b7 → 0xf6b7
+   8042.256000ms decision R1 10.0.1.10 is directly connected on eth0
+   8042.256000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8042.256000ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8042.716800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8043.339200ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8043.486400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8043.486400ms decision R1 TTL 64 → 63, header checksum 0xf5b6 → 0xf6b6
+   8043.486400ms decision R1 10.0.1.10 is directly connected on eth0
+   8043.486400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8043.486400ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8044.716800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8044.716800ms decision R1 TTL 64 → 63, header checksum 0xf5b5 → 0xf6b5
+   8044.716800ms decision R1 10.0.1.10 is directly connected on eth0
+   8044.716800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8044.716800ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8045.339200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8045.339200ms decision R1 TTL 64 → 63, header checksum 0xf8ac → 0xf9ac
+   8045.339200ms decision R1 10.0.1.10 is directly connected on eth0
+   8045.339200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8045.406400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8045.406400ms decision R1 TTL 64 → 63, header checksum 0xfb67 → 0xfc67
+   8045.406400ms decision R1 10.0.1.10 is directly connected on eth0
+   8045.406400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8045.486400ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8045.486400ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8045.486400ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8045.486400ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8045.947200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8046.569600ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8046.716800ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8046.716800ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8046.716800ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8046.716800ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8047.947200ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8047.947200ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8047.947200ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8047.947200ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8048.569600ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8048.569600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8048.569600ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 to 02:00:00:00:01:01 out port 1
+   8048.636800ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8048.636800ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8048.636800ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+   8048.716800ms decision H1 got segment seq=2921 but expected 1: a segment before it is missing. Discarding it and repeating ACK 1 (duplicate ACK)
+   8048.716800ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8048.716800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8048.716800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8048.716800ms decision H1 got ACK 46: 45 more byte(s) confirmed received
+   8049.177600ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8049.800000ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8049.947200ms decision H1 got segment seq=4381 but expected 1: a segment before it is missing. Discarding it and repeating ACK 1 (duplicate ACK)
+   8049.947200ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8049.947200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8049.947200ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8050.784000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8050.784000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8050.784000ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8050.784000ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8051.177600ms decision H1 got segment seq=5841 but expected 1: a segment before it is missing. Discarding it and repeating ACK 1 (duplicate ACK)
+   8051.177600ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8051.177600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8051.177600ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8051.800000ms decision H1 got segment seq=7301 but expected 1: a segment before it is missing. Discarding it and repeating ACK 1 (duplicate ACK)
+   8051.800000ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8051.800000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8051.800000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8051.867200ms decision H1 got segment seq=8001 but expected 1: a segment before it is missing. Discarding it and repeating ACK 1 (duplicate ACK)
+   8051.867200ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8051.867200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8051.867200ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8052.014400ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8052.014400ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8052.014400ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8052.014400ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8052.851200ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8052.851200ms decision R1 TTL 64 → 63, header checksum 0x3867 → 0x3967
+   8052.851200ms decision R1 10.0.2.90 is directly connected on eth1
+   8052.851200ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8052.851200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8053.244800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8053.244800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8053.244800ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8053.244800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8053.867200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8053.867200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8053.867200ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8053.867200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8053.934400ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8053.934400ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8053.934400ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8053.934400ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8054.081600ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8054.081600ms decision R1 TTL 64 → 63, header checksum 0x3866 → 0x3966
+   8054.081600ms decision R1 10.0.2.90 is directly connected on eth1
+   8054.081600ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8054.081600ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8054.918400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8054.918400ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8054.918400ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8054.918400ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8055.312000ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8055.312000ms decision R1 TTL 64 → 63, header checksum 0x3865 → 0x3965
+   8055.312000ms decision R1 10.0.2.90 is directly connected on eth1
+   8055.312000ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8055.312000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8055.934400ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8055.934400ms decision R1 TTL 64 → 63, header checksum 0x3864 → 0x3964
+   8055.934400ms decision R1 10.0.2.90 is directly connected on eth1
+   8055.934400ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8055.934400ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8056.001600ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8056.001600ms decision R1 TTL 64 → 63, header checksum 0x3863 → 0x3963
+   8056.001600ms decision R1 10.0.2.90 is directly connected on eth1
+   8056.001600ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8056.001600ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8056.148800ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8056.148800ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8056.148800ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8056.148800ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8057.379200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8057.379200ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8057.379200ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8057.379200ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8058.001600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8058.001600ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8058.001600ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8058.001600ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8058.068800ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8058.068800ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8058.068800ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8058.068800ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8059.446400ms decision FLAKY got 3 duplicate ACKs for 1: fast retransmit of seq=1 without waiting for the timer
+   8059.446400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8059.446400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8059.446400ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8060.068800ms drop     TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289351447 win=65535 len=0 was lost on the link SW2 → FLAKY (20% loss)
+   8062.676800ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8062.676800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8062.676800ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8062.676800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8065.907200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8065.907200ms decision R1 TTL 64 → 63, header checksum 0xf5b2 → 0xf6b2
+   8065.907200ms decision R1 10.0.1.10 is directly connected on eth0
+   8065.907200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8065.907200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8069.137600ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8069.137600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8069.137600ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8069.137600ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289351447 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8072.368000ms decision H1 sends ACK ack=1461 (received 1460 bytes, next expected byte 1461)
+   8072.368000ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8072.368000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8072.368000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289352907 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8074.435200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8074.435200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8074.435200ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289352907 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8074.435200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289352907 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8076.502400ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8076.502400ms decision R1 TTL 64 → 63, header checksum 0x3862 → 0x3962
+   8076.502400ms decision R1 10.0.2.90 is directly connected on eth1
+   8076.502400ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8076.502400ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289352907 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8078.569600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8078.569600ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8078.569600ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289352907 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8078.569600ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289352907 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8080.636800ms decision FLAKY got ACK 1461: 1460 more byte(s) confirmed received
+   8280.636800ms decision FLAKY retransmission timeout after 200 ms: no ACK for seq=1461. Resending (try 1), next timeout 400 ms
+   8280.636800ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=1461 (bytes 1461–2920), MSS 1460
+   8280.636800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8280.636800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8280.636800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8280.636800ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=2921 (bytes 2921–4380), MSS 1460
+   8280.636800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8280.636800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8280.636800ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=4381 (bytes 4381–5840), MSS 1460
+   8280.636800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8280.636800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8280.636800ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=5841 (bytes 5841–7300), MSS 1460
+   8280.636800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8280.636800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8280.636800ms decision FLAKY sends 700 bytes to 10.0.1.10:49557: seq=7301 (bytes 7301–8000), MSS 1460
+   8280.636800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8280.636800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8280.636800ms decision FLAKY sends FIN to 10.0.1.10:49557: seq=8001, nothing more to send
+   8280.636800ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8280.636800ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8281.867200ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8283.097600ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8283.867200ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8283.867200ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8283.867200ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8283.867200ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8284.328000ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8285.097600ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8285.097600ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8285.097600ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8285.097600ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8285.558400ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8286.180800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8286.328000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8286.328000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8286.328000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8286.328000ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8287.097600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8287.097600ms decision R1 TTL 64 → 63, header checksum 0xf5b1 → 0xf6b1
+   8287.097600ms decision R1 10.0.1.10 is directly connected on eth0
+   8287.097600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8287.097600ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8287.558400ms drop     TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 was lost on the link FLAKY → SW2 (20% loss)
+   8288.180800ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8288.180800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8288.180800ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 to 02:00:00:00:03:02 out port 4
+   8288.180800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8288.248000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8288.248000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8288.248000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+   8288.328000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8288.328000ms decision R1 TTL 64 → 63, header checksum 0xf5b0 → 0xf6b0
+   8288.328000ms decision R1 10.0.1.10 is directly connected on eth0
+   8288.328000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8288.328000ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8288.803200ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8289.558400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8289.558400ms decision R1 TTL 64 → 63, header checksum 0xf5af → 0xf6af
+   8289.558400ms decision R1 10.0.1.10 is directly connected on eth0
+   8289.558400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8289.558400ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8290.328000ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8290.328000ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8290.328000ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8290.328000ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289352907 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8290.803200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8290.803200ms decision R1 TTL 64 → 63, header checksum 0xf8a5 → 0xf9a5
+   8290.803200ms decision R1 10.0.1.10 is directly connected on eth0
+   8290.803200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8290.803200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8290.870400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8290.870400ms decision R1 TTL 64 → 63, header checksum 0xfb60 → 0xfc60
+   8290.870400ms decision R1 10.0.1.10 is directly connected on eth0
+   8290.870400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8291.425600ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8291.558400ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8291.558400ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8291.558400ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8291.558400ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289354367 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8292.788800ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8292.788800ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8292.788800ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8292.788800ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289355827 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8293.425600ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8293.425600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8293.425600ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 to 02:00:00:00:01:01 out port 1
+   8293.492800ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8293.492800ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8293.492800ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+   8293.558400ms decision H1 sends ACK ack=2921 (received 1460 bytes, next expected byte 2921)
+   8293.558400ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8293.558400ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8293.558400ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289354367 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8294.019200ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8294.641600ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8294.788800ms decision H1 sends ACK ack=4381 (received 1460 bytes, next expected byte 4381)
+   8294.788800ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8294.788800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8294.788800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8295.625600ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8295.625600ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8295.625600ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289354367 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8295.625600ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289354367 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8296.019200ms decision H1 sends ACK ack=5841 (received 1460 bytes, next expected byte 5841)
+   8296.019200ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8296.019200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8296.019200ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8296.641600ms decision H1 got segment seq=7301 but expected 5841: a segment before it is missing. Discarding it and repeating ACK 5841 (duplicate ACK)
+   8296.641600ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8296.641600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8296.641600ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8296.708800ms decision H1 got segment seq=8001 but expected 5841: a segment before it is missing. Discarding it and repeating ACK 5841 (duplicate ACK)
+   8296.708800ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8296.708800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8296.708800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8296.856000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8296.856000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8296.856000ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8296.856000ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8297.692800ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8297.692800ms decision R1 TTL 64 → 63, header checksum 0x3861 → 0x3961
+   8297.692800ms decision R1 10.0.2.90 is directly connected on eth1
+   8297.692800ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8297.692800ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289354367 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8298.086400ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8298.086400ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8298.086400ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8298.086400ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8298.708800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8298.708800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8298.708800ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8298.708800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8298.776000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8298.776000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8298.776000ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8298.776000ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8298.923200ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8298.923200ms decision R1 TTL 64 → 63, header checksum 0x3860 → 0x3960
+   8298.923200ms decision R1 10.0.2.90 is directly connected on eth1
+   8298.923200ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8298.923200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8299.760000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8299.760000ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8299.760000ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289354367 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8299.760000ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289354367 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8300.153600ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8300.153600ms decision R1 TTL 64 → 63, header checksum 0x385f → 0x395f
+   8300.153600ms decision R1 10.0.2.90 is directly connected on eth1
+   8300.153600ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8300.153600ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8300.776000ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8300.776000ms decision R1 TTL 64 → 63, header checksum 0x385e → 0x395e
+   8300.776000ms decision R1 10.0.2.90 is directly connected on eth1
+   8300.776000ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8300.776000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8300.843200ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8300.843200ms decision R1 TTL 64 → 63, header checksum 0x385d → 0x395d
+   8300.843200ms decision R1 10.0.2.90 is directly connected on eth1
+   8300.843200ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8300.843200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8300.990400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8300.990400ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8300.990400ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8300.990400ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8301.827200ms decision FLAKY got ACK 2921: 1460 more byte(s) confirmed received
+   8302.220800ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8302.220800ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8302.220800ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8302.220800ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8302.843200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8302.843200ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8302.843200ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8302.843200ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8302.910400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8302.910400ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8302.910400ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8302.910400ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8303.057600ms drop     TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289355827 win=65535 len=0 was lost on the link SW2 → FLAKY (20% loss)
+   8304.288000ms decision FLAKY got ACK 5841: 2920 more byte(s) confirmed received
+   8304.977600ms drop     TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289357287 win=65535 len=0 was lost on the link SW2 → FLAKY (20% loss)
+   8704.288000ms decision FLAKY retransmission timeout after 400 ms: no ACK for seq=5841. Resending (try 1), next timeout 800 ms
+   8704.288000ms decision FLAKY sends 1460 bytes to 10.0.1.10:49557: seq=5841 (bytes 5841–7300), MSS 1460
+   8704.288000ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8704.288000ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8704.288000ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8704.288000ms decision FLAKY sends 700 bytes to 10.0.1.10:49557: seq=7301 (bytes 7301–8000), MSS 1460
+   8704.288000ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8704.288000ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8704.288000ms decision FLAKY sends FIN to 10.0.1.10:49557: seq=8001, nothing more to send
+   8704.288000ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   8704.288000ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   8705.518400ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   8706.140800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8707.518400ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8707.518400ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8707.518400ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 to 02:00:00:00:03:02 out port 4
+   8707.518400ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8708.140800ms drop     TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 was lost on the link FLAKY → SW2 (20% loss)
+   8708.208000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   8708.208000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   8708.208000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+   8708.748800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8710.748800ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8710.748800ms decision R1 TTL 64 → 63, header checksum 0xf5ab → 0xf6ab
+   8710.748800ms decision R1 10.0.1.10 is directly connected on eth0
+   8710.748800ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8710.748800ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8710.816000ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   8710.816000ms decision R1 TTL 64 → 63, header checksum 0xfb5d → 0xfc5d
+   8710.816000ms decision R1 10.0.1.10 is directly connected on eth0
+   8710.816000ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   8711.979200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8713.979200ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8713.979200ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8713.979200ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 to 02:00:00:00:01:01 out port 1
+   8713.979200ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289357287 ack=1955374648 win=65535 len=1460 [1514 B, 1.230 ms serialization + 2.000 ms propagation]
+   8714.046400ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   8714.046400ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   8714.046400ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+   8715.209600ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8717.209600ms decision H1 sends ACK ack=7301 (received 1460 bytes, next expected byte 7301)
+   8717.209600ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8717.209600ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8717.209600ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8717.276800ms decision H1 got segment seq=8001 but expected 7301: a segment before it is missing. Discarding it and repeating ACK 7301 (duplicate ACK)
+   8717.276800ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   8717.276800ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   8717.276800ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8719.276800ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8719.276800ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8719.276800ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8719.276800ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8719.344000ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   8719.344000ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   8719.344000ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   8719.344000ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8721.344000ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8721.344000ms decision R1 TTL 64 → 63, header checksum 0x385c → 0x395c
+   8721.344000ms decision R1 10.0.2.90 is directly connected on eth1
+   8721.344000ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8721.344000ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8721.411200ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   8721.411200ms decision R1 TTL 64 → 63, header checksum 0x385b → 0x395b
+   8721.411200ms decision R1 10.0.2.90 is directly connected on eth1
+   8721.411200ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   8721.411200ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8723.411200ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8723.411200ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8723.411200ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8723.411200ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8723.478400ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   8723.478400ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   8723.478400ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   8723.478400ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289358747 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   8725.478400ms decision FLAKY got ACK 7301: 1460 more byte(s) confirmed received
+   9525.478400ms decision FLAKY retransmission timeout after 800 ms: no ACK for seq=7301. Resending (try 1), next timeout 1600 ms
+   9525.478400ms decision FLAKY sends 700 bytes to 10.0.1.10:49557: seq=7301 (bytes 7301–8000), MSS 1460
+   9525.478400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   9525.478400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   9525.478400ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   9525.478400ms decision FLAKY sends FIN to 10.0.1.10:49557: seq=8001, nothing more to send
+   9525.478400ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   9525.478400ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   9526.100800ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9528.100800ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   9528.100800ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   9528.100800ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 to 02:00:00:00:03:02 out port 4
+   9528.100800ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   9528.168000ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   9528.168000ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   9528.168000ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+   9528.723200ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9530.723200ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   9530.723200ms decision R1 TTL 64 → 63, header checksum 0xf8a0 → 0xf9a0
+   9530.723200ms decision R1 10.0.1.10 is directly connected on eth0
+   9530.723200ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   9530.723200ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   9530.790400ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   9530.790400ms decision R1 TTL 64 → 63, header checksum 0xfb5b → 0xfc5b
+   9530.790400ms decision R1 10.0.1.10 is directly connected on eth0
+   9530.790400ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   9531.345600ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9533.345600ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   9533.345600ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   9533.345600ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 to 02:00:00:00:01:01 out port 1
+   9533.345600ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, PSH] seq=289358747 ack=1955374648 win=65535 len=700 [754 B, 622.4 µs serialization + 2.000 ms propagation]
+   9533.412800ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   9533.412800ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   9533.412800ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+   9533.968000ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK, FIN] seq=289359447 ack=1955374648 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9535.968000ms decision H1 sends ACK ack=8001 (received 700 bytes, next expected byte 8001)
+   9535.968000ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   9535.968000ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   9535.968000ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9536.035200ms table    H1 received FIN from 10.0.2.90: the other side is done sending [ESTABLISHED → CLOSE_WAIT]
+   9536.035200ms decision H1 sends ACK ack=8002 (acknowledging their FIN)
+   9536.035200ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   9536.035200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   9536.035200ms app      H1 server closed after sending 8000 bytes in 6 segments; closing our side
+   9536.035200ms decision H1 sends FIN to 10.0.2.90:80: seq=46, nothing more to send
+   9536.035200ms decision H1: 10.0.2.90 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1
+   9536.035200ms table    H1 ARP cache hit: 10.0.1.1 is at 02:00:00:00:03:01 (eth0)
+   9536.035200ms table    H1 closes its side too [CLOSE_WAIT → LAST_ACK]
+   9536.035200ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9536.102400ms tx       H1 eth0 → SW1 port 1: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, FIN] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9538.035200ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   9538.035200ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   9538.035200ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359447 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   9538.035200ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9538.102400ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   9538.102400ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   9538.102400ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359448 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   9538.102400ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9538.169600ms table    SW1 refreshed 02:00:00:00:01:01 on port 1
+   9538.169600ms table    SW1 MAC table hit: 02:00:00:00:03:01 on port 4
+   9538.169600ms decision SW1 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, FIN] seq=1955374648 ack=289359448 win=65535 len=0 to 02:00:00:00:03:01 out port 4
+   9538.169600ms tx       SW1 port 4 → R1 eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, FIN] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9540.102400ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   9540.102400ms decision R1 TTL 64 → 63, header checksum 0x385a → 0x395a
+   9540.102400ms decision R1 10.0.2.90 is directly connected on eth1
+   9540.102400ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   9540.102400ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9540.169600ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   9540.169600ms decision R1 TTL 64 → 63, header checksum 0x3859 → 0x3959
+   9540.169600ms decision R1 10.0.2.90 is directly connected on eth1
+   9540.169600ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   9540.169600ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9540.236800ms decision R1 LPM: 10.0.2.90 matched 10.0.2.0/24 via eth1 (connected)
+   9540.236800ms decision R1 TTL 64 → 63, header checksum 0x3858 → 0x3958
+   9540.236800ms decision R1 10.0.2.90 is directly connected on eth1
+   9540.236800ms table    R1 ARP cache hit: 10.0.2.90 is at 02:00:00:00:06:01 (eth1)
+   9540.236800ms tx       R1 eth1 → SW2 port 4: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, FIN] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9542.169600ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   9542.169600ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   9542.169600ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359447 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   9542.169600ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359447 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9542.236800ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   9542.236800ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   9542.236800ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359448 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   9542.236800ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9542.304000ms table    SW2 refreshed 02:00:00:00:03:02 on port 4
+   9542.304000ms table    SW2 MAC table hit: 02:00:00:00:06:01 on port 2
+   9542.304000ms decision SW2 forwarding TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, FIN] seq=1955374648 ack=289359448 win=65535 len=0 to 02:00:00:00:06:01 out port 2
+   9542.304000ms tx       SW2 port 2 → FLAKY eth0: TCP 10.0.1.10:49557 → 10.0.2.90:80 [ACK, FIN] seq=1955374648 ack=289359448 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9544.236800ms decision FLAKY got ACK 8001: 700 more byte(s) confirmed received
+   9544.304000ms table    FLAKY's FIN was acknowledged; waiting for 10.0.1.10 to close its side [FIN_WAIT_1 → FIN_WAIT_2]
+   9544.371200ms decision FLAKY sends ACK ack=47 (acknowledging their FIN)
+   9544.371200ms decision FLAKY: 10.0.1.10 is outside 10.0.2.0/24, sending via default gateway 10.0.2.1
+   9544.371200ms table    FLAKY ARP cache hit: 10.0.2.1 is at 02:00:00:00:03:02 (eth0)
+   9544.371200ms tx       FLAKY eth0 → SW2 port 2: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289359448 ack=1955374649 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9544.371200ms table    FLAKY waits 2×MSL (4 s here) in case its last ACK was lost [FIN_WAIT_2 → TIME_WAIT]
+   9546.438400ms table    SW2 refreshed 02:00:00:00:06:01 on port 2
+   9546.438400ms table    SW2 MAC table hit: 02:00:00:00:03:02 on port 4
+   9546.438400ms decision SW2 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289359448 ack=1955374649 win=65535 len=0 to 02:00:00:00:03:02 out port 4
+   9546.438400ms tx       SW2 port 4 → R1 eth1: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289359448 ack=1955374649 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9548.505600ms decision R1 LPM: 10.0.1.10 matched 10.0.1.0/24 via eth0 (connected)
+   9548.505600ms decision R1 TTL 64 → 63, header checksum 0xfb5a → 0xfc5a
+   9548.505600ms decision R1 10.0.1.10 is directly connected on eth0
+   9548.505600ms table    R1 ARP cache hit: 10.0.1.10 is at 02:00:00:00:01:01 (eth0)
+   9548.505600ms tx       R1 eth0 → SW1 port 4: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289359448 ack=1955374649 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9550.572800ms table    SW1 refreshed 02:00:00:00:03:01 on port 4
+   9550.572800ms table    SW1 MAC table hit: 02:00:00:00:01:01 on port 1
+   9550.572800ms decision SW1 forwarding TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289359448 ack=1955374649 win=65535 len=0 to 02:00:00:00:01:01 out port 1
+   9550.572800ms tx       SW1 port 1 → H1 eth0: TCP 10.0.2.90:80 → 10.0.1.10:49557 [ACK] seq=289359448 ack=1955374649 win=65535 len=0 [60 B, 67.2 µs serialization + 2.000 ms propagation]
+   9552.640000ms table    H1's FIN was acknowledged: connection closed [LAST_ACK → CLOSED]
+   9552.640000ms app      H1 done: 8000 bytes in 2552.640 ms (we retransmitted 1×)
+  13544.371200ms table    FLAKY TIME_WAIT over: connection closed [TIME_WAIT → CLOSED]"
+`;
+
 exports[`preset two-lans > produces an identical trace on every run (snapshot) > two-lans 1`] = `
 "      0.000000ms app      H1 PING 10.0.2.15: 32 data bytes (60-byte packets), ttl 64
       0.000000ms decision H1: 10.0.2.15 is outside 10.0.1.0/24, sending via default gateway 10.0.1.1

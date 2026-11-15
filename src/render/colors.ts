@@ -6,6 +6,9 @@ export const PACKET_COLORS: Record<PacketClass, string> = {
   'icmp-reply': '#3ddc97',
   'icmp-error': '#ff4d6d',
   fragment: '#f472b6',
+  'tcp-control': '#fb923c',
+  'tcp-data': '#f97316',
+  udp: '#fde047',
   ipv4: '#b388ff',
   other: '#9aa4b2',
 };
@@ -16,6 +19,9 @@ export const PACKET_LABELS: Record<PacketClass, string> = {
   'icmp-reply': 'ICMP echo reply',
   'icmp-error': 'ICMP error',
   fragment: 'IP fragment',
+  'tcp-control': 'TCP control (SYN/ACK/FIN/RST)',
+  'tcp-data': 'TCP data',
+  udp: 'UDP',
   ipv4: 'IPv4',
   other: 'Other',
 };

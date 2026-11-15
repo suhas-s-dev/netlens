@@ -2,6 +2,7 @@
 import { arpOperName } from './arp';
 import { icmpTypeName } from './icmp';
 import { isFragment, protoName } from './ipv4';
+import { tcpFlagNames } from './tcp';
 import {
   ARP_REQUEST,
   ICMP_ECHO_REPLY,
@@ -12,7 +13,7 @@ import {
   type EthernetFrame,
 } from './types';
 
-export type PacketClass = 'arp' | 'icmp-request' | 'icmp-reply' | 'icmp-error' | 'fragment' | 'ipv4' | 'other';
+export type PacketClass = 'arp' | 'icmp-request' | 'icmp-reply' | 'icmp-error' | 'fragment' | 'tcp-control' | 'tcp-data' | 'udp' | 'ipv4' | 'other';
 
 export function classifyFrame(f: EthernetFrame): PacketClass {
   const p = f.payload;
@@ -25,6 +26,8 @@ export function classifyFrame(f: EthernetFrame): PacketClass {
       if (q.type === ICMP_ECHO_REPLY) return 'icmp-reply';
       return 'icmp-error';
     }
+    if (q.kind === 'udp') return 'udp';
+    if (q.kind === 'tcp') return q.data.length ? 'tcp-data' : 'tcp-control';
     return 'ipv4';
   }
   return 'other';
@@ -48,6 +51,8 @@ export function summarizeFrame(f: EthernetFrame): string {
       if (isIcmpError(q)) return `ICMP ${icmpTypeName(q.type, q.code)} ${p.src} → ${p.dst}`;
       return `ICMP type ${q.type} ${p.src} → ${p.dst}`;
     }
+    if (q.kind === 'udp') return `UDP ${p.src}:${q.srcPort} → ${p.dst}:${q.dstPort} len=${q.data.length}`;
+    if (q.kind === 'tcp') return `TCP ${p.src}:${q.srcPort} → ${p.dst}:${q.dstPort} [${tcpFlagNames(q.flags)}] seq=${q.seq >>> 0}${q.flags & 0x10 ? ` ack=${q.ack >>> 0}` : ''} win=${q.window} len=${q.data.length}${q.options.some((o) => o.kind === 2) ? ` MSS=${q.options.find((o) => o.kind === 2)!.mss}` : ''}`;
     return `IPv4 ${protoName(p.protocol)} ${p.src} → ${p.dst}`;
   }
   return `Ethernet ${f.src} → ${f.dst}`;

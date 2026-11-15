@@ -40,6 +40,22 @@ export const FIELD_NOTES: Record<string, string> = {
   'data.fragment': 'A slice of the original payload. Only the destination puts the slices back together.',
   'icmp.original': 'Start of the packet that caused the error, so the sender knows which one failed.',
   data: 'Payload carried by this layer.',
+  'udp.sport': 'Port of the sending program (usually a random ephemeral port for clients).',
+  'udp.dport': 'Which program should receive this (7 = echo, 53 = DNS, ...).',
+  'udp.len': 'UDP header (8) + data, in bytes.',
+  'udp.checksum': 'Covers a pseudo-header (both IPs, protocol, length) + the UDP header and data.',
+  'udp.data': 'The application message: one datagram = one message.',
+  'tcp.sport': "Sender's port. With the IPs and the other port it identifies the connection.",
+  'tcp.dport': 'Port the segment is for (80 = web, 179 = BGP...).',
+  'tcp.seq': 'Number of the first data byte in this segment (SYN/FIN also use one number).',
+  'tcp.ack': 'The next byte the sender of this segment expects to receive. Valid when ACK is set.',
+  'tcp.doff': 'TCP header length in 32-bit words: 5 = 20 bytes; 6 = 24 with the MSS option.',
+  'tcp.flags': 'SYN = open, ACK = ack field valid, PSH = push to the app, FIN = done sending, RST = abort.',
+  'tcp.window': 'How many more bytes the sender of this segment can receive right now (flow control).',
+  'tcp.checksum': 'Covers a pseudo-header (both IPs, protocol, length) + the TCP header and data.',
+  'tcp.urgent': 'Rarely used; only meaningful with URG.',
+  'tcp.options': 'Here: the MSS option, only in SYN and SYN-ACK.',
+  'tcp.data': "A slice of the application's byte stream.",
 };
 
 export const FIELD_CONCEPT: Record<string, ConceptId> = {
@@ -54,6 +70,16 @@ export const FIELD_CONCEPT: Record<string, ConceptId> = {
   'ipv4.len': 'mtu',
   'icmp.mtu': 'pmtud',
   'data.fragment': 'fragmentation',
+  'udp.sport': 'port-number',
+  'udp.dport': 'port-number',
+  'tcp.sport': 'port-number',
+  'tcp.dport': 'port-number',
+  'tcp.seq': 'seq-ack',
+  'tcp.ack': 'seq-ack',
+  'tcp.flags': 'tcp-states',
+  'tcp.window': 'tcp-window',
+  'tcp.options': 'mss',
+  'tcp.data': 'segmentation',
   'ipv4.checksum': 'checksum',
   'ipv4.src': 'ip',
   'ipv4.dst': 'ip',
@@ -62,6 +88,8 @@ export const FIELD_CONCEPT: Record<string, ConceptId> = {
 };
 
 export const LAYER_CONCEPT: Record<string, ConceptId> = {
+  TCP: 'tcp',
+  UDP: 'udp',
   'Ethernet II': 'ethernet',
   ARP: 'arp',
   IPv4: 'ip',
@@ -73,6 +101,8 @@ export const LAYER_BLURB: Record<string, string> = {
   ARP: 'Finds the MAC address that belongs to an IP address on the local network.',
   IPv4: 'Layer 3: end-to-end addressing. Routers read this to choose the next hop.',
   ICMP: 'Control messages: ping (echo) and error reports.',
+  TCP: 'Layer 4: reliable, ordered byte stream between two ports, with handshakes, ACKs and retransmission.',
+  UDP: 'Layer 4: one standalone message between two ports. No connection, no ACKs.',
 };
 
 export const COLUMN_NOTES: Record<string, string> = {

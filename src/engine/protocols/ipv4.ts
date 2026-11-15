@@ -4,7 +4,9 @@ import { bytesToIp, ipToBytes, type Ipv4 } from './addr';
 import { ByteReader, ByteWriter, hex } from './bytes';
 import { internetChecksum } from './checksum';
 import { decodeIcmp, encodeIcmp, icmpLength } from './icmp';
-import { IPPROTO_ICMP, IPV4_FLAG_DF, IPV4_FLAG_MF, type Ipv4Packet, type Ipv4Payload } from './types';
+import { decodeTcp, encodeTcp, tcpLength } from './tcp';
+import { decodeUdp, encodeUdp } from './udp';
+import { IPPROTO_ICMP, IPPROTO_TCP, IPPROTO_UDP, IPV4_FLAG_DF, IPV4_FLAG_MF, type Ipv4Packet, type Ipv4Payload } from './types';
 
 export const DEFAULT_TTL = 64;
 
@@ -15,7 +17,16 @@ export function protoName(p: number): string {
 }
 
 export function payloadLength(p: Ipv4Payload): number {
-  return p.kind === 'raw' ? p.bytes.length : icmpLength(p);
+  if (p.kind === 'raw') return p.bytes.length;
+  if (p.kind === 'udp') return p.length;
+  if (p.kind === 'tcp') return tcpLength(p);
+  return icmpLength(p);
+}
+
+function encodePayload(w: ByteWriter, p: Ipv4Payload): void {
+  if (p.kind === 'icmp') encodeIcmp(w, p);
+  else if (p.kind === 'udp') encodeUdp(w, p);
+  else if (p.kind === 'tcp') encodeTcp(w, p);
 }
 
 function flagsDisplay(flags: number): string {
@@ -74,7 +85,7 @@ export function encodeIpv4(w: ByteWriter, p: Ipv4Packet): void {
       }
     }
   } else {
-    encodeIcmp(w, p.payload);
+    encodePayload(w, p.payload);
   }
 }
 
@@ -110,7 +121,7 @@ export function decodeIpv4(r: ByteReader): Ipv4Packet {
   const fragmentOffset = ff & 0x1fff;
   // A fragment carries only a slice of the upper-layer message: keep it as raw bytes.
   const fragmented = (flags & IPV4_FLAG_MF) !== 0 || fragmentOffset > 0;
-  const payload: Ipv4Payload = protocol === IPPROTO_ICMP && !fragmented ? decodeIcmp(pr) : { kind: 'raw', bytes: pr.rest() };
+  const payload: Ipv4Payload = fragmented ? { kind: 'raw', bytes: pr.rest() } : decodeBody(protocol, pr);
   r.pos = payloadEnd;
   return {
     kind: 'ipv4',
@@ -187,7 +198,7 @@ export function isFragment(p: Pick<Ipv4Packet, 'flags' | 'fragmentOffset'>): boo
 export function payloadBytes(p: Ipv4Packet): Uint8Array {
   if (p.payload.kind === 'raw') return p.payload.bytes;
   const w = new ByteWriter(p.totalLength);
-  encodeIcmp(w, p.payload);
+  encodePayload(w, p.payload);
   return w.toBytes();
 }
 
@@ -230,5 +241,12 @@ export function fragment(p: Ipv4Packet, mtu: number): Ipv4Packet[] {
 
 /** Decode upper-layer bytes of a reassembled datagram. */
 export function decodePayload(protocol: number, bytes: Uint8Array): Ipv4Payload {
-  return protocol === IPPROTO_ICMP ? decodeIcmp(new ByteReader(bytes)) : { kind: 'raw', bytes };
+  return decodeBody(protocol, new ByteReader(bytes));
+}
+
+function decodeBody(protocol: number, r: ByteReader): Ipv4Payload {
+  if (protocol === IPPROTO_ICMP) return decodeIcmp(r);
+  if (protocol === IPPROTO_UDP && r.remaining >= 8) return decodeUdp(r);
+  if (protocol === IPPROTO_TCP && r.remaining >= 20) return decodeTcp(r);
+  return { kind: 'raw', bytes: r.rest() };
 }

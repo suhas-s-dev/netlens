@@ -36,7 +36,19 @@ export type ConceptId =
   | 'pmtud'
   | 'mtr'
   | 'packet-loss'
-  | 'packet-anatomy';
+  | 'packet-anatomy'
+  | 'port-number'
+  | 'udp'
+  | 'tcp'
+  | 'handshake'
+  | 'mss'
+  | 'segmentation'
+  | 'seq-ack'
+  | 'tcp-window'
+  | 'retransmission'
+  | 'tcp-close'
+  | 'rst'
+  | 'tcp-states';
 
 export interface Concept {
   id: ConceptId;
@@ -311,6 +323,91 @@ const C: Concept[] = [
     short: 'Headers stacked in front of the data: Ethernet 14 + IPv4 20 + ICMP 8 (or TCP 20 / UDP 8) + payload.',
     body: 'Overhead adds up: a 1500-byte IP packet carries 1472 bytes of ping data (1500 - 20 - 8), or 1460 bytes of TCP data (1500 - 20 - 20, the MSS). On the wire the frame is 1518 bytes (+14 header, +4 FCS), plus 8 bytes of preamble and a 12-byte gap.',
     related: ['mtu', 'encapsulation', 'ethernet'],
+  },
+  {
+    id: 'port-number',
+    title: 'Port numbers',
+    short: 'Layer 4 addresses: which program on a host a packet is for (80 = web, 53 = DNS, 179 = BGP).',
+    body: 'An IP address gets a packet to the right machine; the port gets it to the right program. A connection is identified by four values: source IP, source port, destination IP, destination port. Clients use a random "ephemeral" source port (49152–65535); servers listen on well-known ports (below 1024).',
+    analogy: 'IP address = the building, port = the apartment number.',
+    related: ['tcp', 'udp', 'ip'],
+  },
+  {
+    id: 'udp',
+    title: 'UDP',
+    short: 'User Datagram Protocol: send a message and hope. No connection, no ACKs, no retransmission.',
+    body: 'The UDP header is just 8 bytes: source port, destination port, length and checksum. Each datagram stands alone. If it is lost, nobody notices unless the application does. That makes it fast and simple (DNS, games, voice, NTP), and also easy to spoof, which is why UDP services get abused for reflection/amplification DDoS. A datagram to a closed port triggers ICMP Port Unreachable.',
+    related: ['port-number', 'tcp', 'fragmentation'],
+  },
+  {
+    id: 'tcp',
+    title: 'TCP',
+    short: 'Transmission Control Protocol: a reliable, ordered byte stream between two ports.',
+    body: 'TCP sets up a connection (3-way handshake), numbers every byte (sequence numbers), and the receiver confirms what it got (ACKs). Missing data is resent. It splits the application\'s stream into segments that fit the network (MSS), and closes cleanly with FIN in each direction. The header is 20 bytes plus options.',
+    related: ['handshake', 'seq-ack', 'mss', 'retransmission', 'tcp-states'],
+  },
+  {
+    id: 'handshake',
+    title: '3-way handshake',
+    short: 'SYN → SYN-ACK → ACK: both sides pick a starting sequence number and confirm the other\'s.',
+    body: 'The client sends SYN with its initial sequence number (ISN) and its MSS. The server answers SYN-ACK: its own ISN, plus ack = client ISN + 1. The client ACKs server ISN + 1. Now both directions are open. The SYN and FIN flags each count as one sequence number. ISNs are random to make spoofing hard. A flood of SYNs that never complete is a SYN flood.',
+    related: ['tcp', 'seq-ack', 'mss'],
+  },
+  {
+    id: 'mss',
+    title: 'MSS',
+    short: 'Maximum Segment Size: the most TCP data per segment. Usually MTU - 40 (1500 → 1460).',
+    body: 'Each side announces its MSS in the SYN (a TCP option): "send me at most this much data per segment". It is computed from the local MTU minus 20 bytes of IP and 20 of TCP header. It cannot be renegotiated later, but a sender lowers its segment size if Path MTU Discovery reports a smaller path MTU (or if a router "clamps" the MSS in the SYN, as GRE tunnels do: 1436).',
+    related: ['mtu', 'segmentation', 'pmtud'],
+  },
+  {
+    id: 'segmentation',
+    title: 'Segmentation vs fragmentation',
+    short: 'TCP cuts data into segments that fit (Layer 4, by MSS); IP cuts packets that don\'t (Layer 3, by MTU).',
+    body: 'TCP segments the application\'s stream so each segment already fits the path: every segment is a complete, independently delivered and acknowledged packet. IP fragmentation happens after the fact to a single packet that is too big; losing one fragment loses the whole packet. UDP cannot segment, so a large datagram is fragmented by IP.',
+    related: ['mss', 'fragmentation', 'mtu'],
+  },
+  {
+    id: 'seq-ack',
+    title: 'Sequence & acknowledgment numbers',
+    short: 'seq = number of the first byte in this segment; ack = the next byte I expect from you.',
+    body: 'Every byte in each direction is numbered from that side\'s ISN. Tools show "relative" numbers starting at 0 for readability. An ACK is cumulative: ack = 2921 means "I have everything up to byte 2920". If a segment is missing, the receiver keeps repeating the same ACK: duplicate ACKs.',
+    related: ['tcp', 'retransmission'],
+  },
+  {
+    id: 'tcp-window',
+    title: 'Receive window',
+    short: 'How many unacknowledged bytes the receiver is willing to accept right now.',
+    body: 'The Window field (65535 here) limits how far ahead the sender may go before it must wait for ACKs: flow control. (Real TCP also has a congestion window that grows from slow start; this simulator does not model congestion control yet.)',
+    related: ['seq-ack', 'tcp'],
+  },
+  {
+    id: 'retransmission',
+    title: 'Retransmission',
+    short: 'Resending data that was not acknowledged in time, or after 3 duplicate ACKs.',
+    body: 'Each side keeps a retransmission timer (RTO) computed from measured round-trip times (RFC 6298, minimum 200 ms here). If it fires, the oldest unacknowledged data is resent and the timer doubles (exponential backoff). Three duplicate ACKs mean "one segment was lost but later ones arrived", so the sender resends right away: fast retransmit (RFC 5681).',
+    related: ['seq-ack', 'packet-loss'],
+  },
+  {
+    id: 'tcp-close',
+    title: 'Closing: FIN & TIME_WAIT',
+    short: 'Each side sends FIN when it has nothing more to send; the other ACKs it.',
+    body: 'A TCP connection is two one-way streams, closed separately: FIN → ACK, then FIN → ACK the other way (often 4 segments, sometimes 3). The side that closed first waits in TIME_WAIT for 2×MSL (normally minutes; 4 s here) so a late, lost final ACK can still be answered and old segments die out.',
+    related: ['tcp-states', 'tcp'],
+  },
+  {
+    id: 'rst',
+    title: 'RST (reset)',
+    short: 'An abrupt "no": the port is closed, or the connection makes no sense.',
+    body: 'A SYN to a port nothing listens on is answered with RST: the client reports "connection refused". RST also kills a connection immediately, without the FIN exchange. Firewalls and DDoS mitigation sometimes send RSTs on purpose.',
+    related: ['tcp', 'port-number'],
+  },
+  {
+    id: 'tcp-states',
+    title: 'TCP states',
+    short: 'LISTEN, SYN_SENT, SYN_RCVD, ESTABLISHED, FIN_WAIT_1/2, CLOSE_WAIT, LAST_ACK, TIME_WAIT, CLOSED.',
+    body: 'Client: CLOSED → SYN_SENT → ESTABLISHED. Server: LISTEN → SYN_RCVD → ESTABLISHED. Whoever closes first goes FIN_WAIT_1 → FIN_WAIT_2 → TIME_WAIT; the other goes CLOSE_WAIT → LAST_ACK → CLOSED. A server under SYN flood fills up with SYN_RCVD entries (its "backlog").',
+    related: ['handshake', 'tcp-close'],
   },
 ];
 

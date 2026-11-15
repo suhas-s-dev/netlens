@@ -325,3 +325,11 @@ table.tbl { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
 .anat-bar span { padding: 0 3px; overflow: hidden; text-overflow: clip; }
 .seg-eth { background: #9fb7cf; } .seg-arp { background: var(--arp); } .seg-ipv4 { background: #b9a3ff; }
 .seg-icmp { background: #7cc4ff; } .seg-data { background: #3ddc97; } .seg-pad { background: #5d6e82; } .seg-fcs { background: #3a4458; color: #c9d4e2 !important; }
+.hex .b.L-udp { color: #fde047; }
+.hex .b.L-tcp { color: #fb923c; }
+.seg-udp { background: #fde047; } .seg-tcp { background: #fb923c; }
+.pill.tcp-ESTABLISHED { color: var(--ok); border-color: #1d5a43; }
+.pill.tcp-SYN_SENT, .pill.tcp-SYN_RCVD { color: var(--icmp-req); border-color: #24476b; }
+.pill.tcp-TIME_WAIT, .pill.tcp-FIN_WAIT_1, .pill.tcp-FIN_WAIT_2, .pill.tcp-CLOSE_WAIT, .pill.tcp-LAST_ACK, .pill.tcp-CLOSING { color: var(--warn); border-color: #6b5320; }
+.seg.tools { flex-wrap: wrap; }
+.seg-icmp { background: #7cc4ff; }

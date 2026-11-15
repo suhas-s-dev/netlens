@@ -19,15 +19,21 @@ import {
   ICMP_TIME_EXCEEDED,
   ICMP_TIMX_REASS,
   ICMP_UNREACH_NEEDFRAG,
+  ICMP_UNREACH_PORT,
   IPPROTO_ICMP,
+  IPPROTO_TCP,
+  IPPROTO_UDP,
   IPV4_FLAG_DF,
   isIcmpEcho,
   isIcmpError,
   type IcmpError,
   type Ipv4Packet,
+  type UdpDatagram,
 } from '../protocols/types';
 import { ArpResolver, type ArpConfig } from './ArpResolver';
 import { ipOutput, Reassembler } from './ipOutput';
+import { TcpStack, type TcpConnection, type TcpCallbacks } from './tcp';
+import { makeUdp, udpChecksumValid } from '../protocols/udp';
 import { Device, type Port, type PortInit, type SendMeta } from './Device';
 import { DEFAULT_ARP_CONFIG } from './Router';
 import type { HostState } from './state';
@@ -78,8 +84,29 @@ function fmtMs(ns: number): string {
   return `${(ns / MS).toFixed(3)} ms`;
 }
 
-interface Session {
+export interface TcpFetchOptions {
+  port?: number;
+  /** Size of the response to ask the server for. */
+  bytes?: number;
+}
+
+export interface UdpOptions {
+  port?: number;
+  count?: number;
+  size?: number;
+  intervalNs?: number;
+}
+
+/** Anything that prints lines into the host terminal. */
+interface AppLike {
   readonly id: string;
+  readonly app: 'ping' | 'traceroute' | 'pmtud' | 'mtr' | 'tcp' | 'udp';
+  readonly dst: Ipv4;
+  done: boolean;
+  lines: string[];
+}
+
+interface Session extends AppLike {
   readonly app: 'ping' | 'traceroute' | 'pmtud' | 'mtr';
   readonly identifier: number;
   readonly dst: Ipv4;
@@ -94,7 +121,10 @@ export class Host extends Device {
   readonly kind = 'host' as const;
   readonly arp: ArpResolver;
   private ipId: number;
-  private sessions = new Map<string, Session>();
+  private sessions = new Map<string, AppLike>();
+  readonly tcp: TcpStack;
+  private udpSessions = new Map<number, UdpSession>();
+  private nextUdpPort = 0;
   private byIdent = new Map<number, Session>();
   private sessionCounter = 0;
   private pmtu = new Map<Ipv4, { mtu: number; expiresAt: number }>();
@@ -113,6 +143,8 @@ export class Host extends Device {
       for (const q of dropped) this.notifyLocalFail(q.packet, `Destination Host Unreachable (no ARP reply from ${ip})`);
     });
     this.ipId = engine.rng.int(0, 0xffff);
+    this.tcp = new TcpStack(this);
+    this.tcp.listen(80, (c) => webServer(this, c));
     this.reasm = new Reassembler(this, (first) => {
       // RFC 1122 3.3.2: report a timed-out reassembly to the sender if fragment 0 arrived.
       if (!first || !this.ip) return;
@@ -224,6 +256,15 @@ export class Host extends Device {
     const meta = { packetId: frame.id, flowId: frame.flowId };
     const mine = port.ip?.addr;
     const m = p.payload;
+    if (m.kind === 'tcp') {
+      if (isBcast) return;
+      this.tcp.input(p, m, frame);
+      return;
+    }
+    if (m.kind === 'udp') {
+      this.udpInput(port, p, m, frame, isBcast);
+      return;
+    }
     if (m.kind !== 'icmp') {
       this.drop('unsupported', `${this.name} has no handler for IP protocol ${p.protocol}`, { iface: port.id, ...meta });
       return;
@@ -259,6 +300,21 @@ export class Host extends Device {
           this.table('pmtu', had ? 'update' : 'add', dst, `${this.name} learned path MTU to ${dst} is ${mtu} (from ${p.src})`, meta);
         }
       }
+      if (o.length >= ihl + 4 && (o[9] === IPPROTO_TCP || o[9] === IPPROTO_UDP)) {
+        const sport = (o[ihl]! << 8) | o[ihl + 1]!;
+        const dport = (o[ihl + 2]! << 8) | o[ihl + 3]!;
+        const dst = bytesToIp(o, 16);
+        const needfrag = m.type === ICMP_DEST_UNREACHABLE && m.code === ICMP_UNREACH_NEEDFRAG;
+        if (o[9] === IPPROTO_TCP) {
+          if (this.tcp.icmpError(dst, sport, dport, needfrag ? 'needfrag' : 'unreachable', m.unused & 0xffff, icmpErrorText(m))) return;
+        } else {
+          const s = this.udpSessions.get(sport);
+          if (s) {
+            s.onIcmpError(p.src, m, frame);
+            return;
+          }
+        }
+      }
       if (o.length >= ihl + 8 && o[9] === IPPROTO_ICMP && o[ihl] === ICMP_ECHO_REQUEST) {
         const ident = (o[ihl + 4]! << 8) | o[ihl + 5]!;
         const seq = (o[ihl + 6]! << 8) | o[ihl + 7]!;
@@ -272,6 +328,59 @@ export class Host extends Device {
       return;
     }
     this.decision('local', `${this.name} received ICMP type ${m.type} from ${p.src}`, meta);
+  }
+
+  private udpInput(port: Port, p: Ipv4Packet, u: UdpDatagram, frame: Frame, isBcast: boolean): void {
+    const meta = { packetId: frame.id, flowId: frame.flowId };
+    const mine = port.ip?.addr;
+    if (!udpChecksumValid(p.src, p.dst, u)) {
+      this.drop('bad-checksum', `${this.name} dropped UDP datagram from ${p.src}: bad checksum`, meta);
+      return;
+    }
+    const s = this.udpSessions.get(u.dstPort);
+    if (s) {
+      s.onDatagram(p, u, frame);
+      return;
+    }
+    if (u.dstPort === 7 && mine) {
+      // RFC 862 echo service.
+      this.decision('udp', `${this.name} UDP echo service (port 7) sends the ${u.data.length} bytes back to ${p.src}:${u.srcPort}`, meta);
+      this.sendIp(makeIpv4({ src: mine, dst: p.src, protocol: IPPROTO_UDP, identification: this.nextIpId(), payload: makeUdp(mine, p.src, 7, u.srcPort, u.data) }), {
+        flowId: this.engine.newFlowId(),
+        parentId: frame.id,
+      });
+      return;
+    }
+    if (isBcast || !mine) return;
+    // RFC 1122 4.1.3.1: a datagram for a port nobody listens on gets ICMP Port Unreachable.
+    this.drop('port-closed', `${this.name}: nothing listens on UDP port ${u.dstPort}; sending ICMP Port Unreachable to ${p.src}`, meta);
+    const err = makeIcmpError(ICMP_DEST_UNREACHABLE, ICMP_UNREACH_PORT, encodeIpv4Datagram(p));
+    this.sendIp(makeIpv4({ src: mine, dst: p.src, protocol: IPPROTO_ICMP, identification: this.nextIpId(), payload: err }), { flowId: this.engine.newFlowId(), parentId: frame.id });
+  }
+
+  bindUdp(s: UdpSession): number {
+    if (!this.nextUdpPort) this.nextUdpPort = 50000 + this.engine.rng.int(0, 999);
+    const port = this.nextUdpPort++;
+    this.udpSessions.set(port, s);
+    return port;
+  }
+
+  unbindUdp(port: number): void {
+    this.udpSessions.delete(port);
+  }
+
+  startTcpFetch(dst: Ipv4, opts: TcpFetchOptions = {}): string {
+    const s = new TcpFetchSession(this, this.nextSessionId('tcp'), dst, opts);
+    this.sessions.set(s.id, s);
+    s.start();
+    return s.id;
+  }
+
+  startUdp(dst: Ipv4, opts: UdpOptions = {}): string {
+    const s = new UdpSession(this, this.nextSessionId('udp'), dst, opts);
+    this.sessions.set(s.id, s);
+    s.start();
+    return s.id;
   }
 
   private notifyLocalFail(packet: Ipv4Packet, reason: string): void {
@@ -296,7 +405,7 @@ export class Host extends Device {
   }
 
   /** Emit an application line (ping/traceroute output). */
-  appLine(s: Session, status: 'start' | 'sent' | 'reply' | 'timeout' | 'error' | 'hop' | 'done', text: string, extra: { packetId?: string; flowId?: string } = {}): void {
+  appLine(s: AppLike, status: 'start' | 'sent' | 'reply' | 'timeout' | 'error' | 'hop' | 'done', text: string, extra: { packetId?: string; flowId?: string } = {}): void {
     if (status !== 'sent') s.lines.push(text);
     this.engine.emit({ type: 'app', node: this.id, app: s.app, sessionId: s.id, status, text: `${this.name} ${text}`, ...extra });
   }
@@ -352,6 +461,8 @@ export class Host extends Device {
       ports: portViews(this),
       arp: this.arp.rows(),
       pmtu: [...this.pmtu.entries()].filter(([, e]) => e.expiresAt > this.engine.now).map(([dst, e]) => ({ dst, mtu: e.mtu, expiresIn: e.expiresAt - this.engine.now })),
+      tcp: this.tcp.rows(),
+      listening: { tcp: this.tcp.listening(), udp: [7] },
       sessions: [...this.sessions.values()].map((s) => ({ id: s.id, app: s.app, dst: s.dst, done: s.done, lines: [...s.lines] })),
     };
   }
@@ -788,5 +899,173 @@ class MtrSession implements Session {
       this.host.appLine(this, 'hop', `${String(i + 1).padStart(2)}. ${(h.addr ?? '???').padEnd(16)} ${loss.toFixed(1).padStart(5)}% ${String(h.sent).padStart(4)} ${row}`);
     });
     this.host.appLine(this, 'done', `mtr to ${this.dst} complete`);
+  }
+}
+
+const ascii = (s: string) => Uint8Array.from(s, (ch) => ch.charCodeAt(0) & 0xff);
+const text = (b: Uint8Array) => String.fromCharCode(...b.subarray(0, 256));
+
+/**
+ * Tiny HTTP/1.0-style server on TCP port 80: reads a request like "GET /bytes/4000", answers
+ * with a response of exactly that many bytes, then closes its side (FIN).
+ */
+function webServer(host: Host, _c: TcpConnection): TcpCallbacks {
+  let req = '';
+  let answered = false;
+  return {
+    onData(c, data) {
+      req += text(data);
+      if (answered || !req.includes('\r\n\r\n')) return;
+      answered = true;
+      const n = Math.min(1_000_000, Math.max(64, Number(/\/bytes\/(\d+)/.exec(req)?.[1] ?? 1000)));
+      const head = `HTTP/1.0 200 OK\r\nContent-Length: ${n}\r\n\r\n`;
+      const body = new Uint8Array(n);
+      body.set(ascii(head).subarray(0, n));
+      for (let i = head.length; i < n; i++) body[i] = 97 + (i % 26);
+      host.decision('tcp', `${host.name} web server (port 80) got "${req.split('\r\n')[0]}": sending a ${n}-byte response, then closing`);
+      c.write(body);
+      c.close();
+    },
+    onPeerClose(c) {
+      c.close();
+    },
+  };
+}
+
+/** curl-like client: connect, send one request, read the whole response, close. */
+class TcpFetchSession implements AppLike {
+  readonly app = 'tcp' as const;
+  done = false;
+  lines: string[] = [];
+  private received = 0;
+  private readonly port: number;
+  private readonly bytes: number;
+  private startedAt = 0;
+
+  constructor(
+    private host: Host,
+    readonly id: string,
+    readonly dst: Ipv4,
+    o: TcpFetchOptions,
+  ) {
+    this.port = o.port ?? 80;
+    this.bytes = o.bytes ?? 4000;
+  }
+
+  start(): void {
+    this.startedAt = this.host.engine.now;
+    this.host.appLine(this, 'start', `TCP connect to ${this.dst}:${this.port} (then ask for ${this.bytes} bytes)`);
+    const r = this.host.tcp.connect(this.dst, this.port, {
+      onEstablished: (c) => {
+        this.host.appLine(this, 'reply', `connected in ${fmtMs(this.host.engine.now - this.startedAt)} (3-way handshake done, MSS ${c.mss})`);
+        const req = ascii(`GET /bytes/${this.bytes} HTTP/1.0\r\nHost: ${this.dst}\r\n\r\n`);
+        this.host.appLine(this, 'sent', `request GET /bytes/${this.bytes} (${req.length} bytes)`);
+        c.write(req);
+      },
+      onData: (_c, d) => {
+        this.received += d.length;
+      },
+      onPeerClose: (c) => {
+        this.host.appLine(this, 'reply', `server closed after sending ${this.received} bytes in ${c.segmentsReceived} segments; closing our side`);
+        c.close();
+      },
+      onClosed: (c, reason) => {
+        if (reason) this.host.appLine(this, 'error', reason);
+        this.done = true;
+        this.host.appLine(
+          this,
+          'done',
+          reason
+            ? `TCP to ${this.dst}:${this.port} failed after ${fmtMs(this.host.engine.now - this.startedAt)}`
+            : `done: ${this.received} bytes in ${fmtMs(this.host.engine.now - this.startedAt)} (we retransmitted ${c.retransmissions}×)`,
+        );
+      },
+    });
+    if (typeof r === 'string') {
+      this.done = true;
+      this.host.appLine(this, 'error', r);
+    }
+  }
+}
+
+/** Sends numbered UDP datagrams and matches echoes (or ICMP Port Unreachable). */
+class UdpSession implements AppLike {
+  readonly app = 'udp' as const;
+  done = false;
+  lines: string[] = [];
+  private localPort = 0;
+  private sent = 0;
+  private answered = 0;
+  private outstanding = new Map<number, { at: number; timer: ScheduledEvent }>();
+  private readonly port: number;
+  private readonly count: number;
+  private readonly size: number;
+  private readonly interval: number;
+
+  constructor(
+    private host: Host,
+    readonly id: string,
+    readonly dst: Ipv4,
+    o: UdpOptions,
+  ) {
+    this.port = o.port ?? 7;
+    this.count = o.count ?? 3;
+    this.size = Math.max(8, o.size ?? 64);
+    this.interval = o.intervalNs ?? 500 * MS;
+  }
+
+  start(): void {
+    this.localPort = this.host.bindUdp(this);
+    this.host.appLine(this, 'start', `UDP from port ${this.localPort} to ${this.dst}:${this.port}: ${this.count} datagram(s) of ${this.size} bytes (no handshake, no ACKs)`);
+    this.sendNext();
+  }
+
+  private sendNext(): void {
+    const src = this.host.ip;
+    if (!src || this.done) return;
+    const seq = ++this.sent;
+    const data = new Uint8Array(this.size);
+    data.set(ascii(`seq ${seq} `).subarray(0, this.size));
+    for (let i = `seq ${seq} `.length; i < this.size; i++) data[i] = 97 + (i % 26);
+    const timer = this.host.engine.schedule(2 * SEC, `${this.host.name} udp timeout`, () => this.onTimeout(seq), this.host.id);
+    this.outstanding.set(seq, { at: this.host.engine.now, timer });
+    const err = this.host.sendIp(makeIpv4({ src, dst: this.dst, protocol: IPPROTO_UDP, identification: this.host.nextIpId(), payload: makeUdp(src, this.dst, this.localPort, this.port, data) }), {
+      flowId: this.host.engine.newFlowId(),
+    });
+    if (err) this.settle(seq, 'error', err);
+    if (this.sent < this.count) this.host.engine.schedule(this.interval, `${this.host.name} udp next`, () => this.sendNext(), this.host.id);
+  }
+
+  onDatagram(p: Ipv4Packet, u: UdpDatagram, frame: Frame): void {
+    const seq = Number(/^seq (\d+)/.exec(text(u.data))?.[1] ?? 0);
+    const o = this.outstanding.get(seq);
+    if (!o) return;
+    this.answered++;
+    this.settle(seq, 'reply', `${u.data.length} bytes back from ${p.src}:${u.srcPort} seq=${seq} time=${fmtMs(this.host.engine.now - o.at)}`, { packetId: frame.id, flowId: frame.flowId });
+  }
+
+  onIcmpError(from: Ipv4, err: IcmpError, frame: Frame): void {
+    const seq = [...this.outstanding.keys()][0];
+    if (seq === undefined) return;
+    const why = err.type === ICMP_DEST_UNREACHABLE && err.code === ICMP_UNREACH_PORT ? `port ${this.port} unreachable (nothing listening)` : icmpErrorText(err);
+    this.settle(seq, 'error', `From ${from}: ${why}`, { packetId: frame.id, flowId: frame.flowId });
+  }
+
+  private onTimeout(seq: number): void {
+    if (!this.outstanding.has(seq)) return;
+    this.settle(seq, 'timeout', `no reply for seq=${seq}: UDP does not retransmit, the datagram is simply lost`);
+  }
+
+  private settle(seq: number, status: 'reply' | 'error' | 'timeout', line: string, extra: { packetId?: string; flowId?: string } = {}): void {
+    const o = this.outstanding.get(seq);
+    if (!o) return;
+    o.timer.cancelled = true;
+    this.outstanding.delete(seq);
+    this.host.appLine(this, status, line, extra);
+    if (this.sent >= this.count && this.outstanding.size === 0 && !this.done) {
+      this.done = true;
+      this.host.unbindUdp(this.localPort);
+      this.host.appLine(this, 'done', `UDP: ${this.count} sent, ${this.answered} answered`);
+    }
   }
 }

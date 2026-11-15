@@ -37,7 +37,7 @@ export interface RouteRow {
 
 export interface AppSessionView {
   id: string;
-  app: 'ping' | 'traceroute' | 'pmtud' | 'mtr';
+  app: 'ping' | 'traceroute' | 'pmtud' | 'mtr' | 'tcp' | 'udp';
   dst: string;
   done: boolean;
   lines: string[];
@@ -56,11 +56,28 @@ export interface PmtuRow {
   expiresIn: number;
 }
 
+export interface TcpRow {
+  id: string;
+  local: string;
+  remote: string;
+  state: string;
+  role: 'client' | 'server';
+  mss: number;
+  sent: number;
+  received: number;
+  unacked: number;
+  rtoMs: number;
+  srttMs: number | null;
+  retransmissions: number;
+}
+
 export interface HostState extends Base {
   kind: 'host';
   gateway: string | null;
   arp: ArpRow[];
   pmtu: PmtuRow[];
+  tcp: TcpRow[];
+  listening: { tcp: number[]; udp: number[] };
   sessions: AppSessionView[];
 }
 

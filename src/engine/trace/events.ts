@@ -55,6 +55,7 @@ export type DropReason =
   | 'too-big'
   | 'reassembly-timeout'
   | 'link-loss'
+  | 'port-closed'
   | 'unsupported';
 
 export interface DropEvent extends TraceBase {
@@ -64,7 +65,7 @@ export interface DropEvent extends TraceBase {
   iface?: string;
 }
 
-export type TableName = 'arp' | 'mac' | 'route' | 'pmtu';
+export type TableName = 'arp' | 'mac' | 'route' | 'pmtu' | 'tcp';
 export type TableOp = 'add' | 'update' | 'refresh' | 'hit' | 'remove' | 'pending';
 
 export interface TableEvent extends TraceBase {
@@ -81,7 +82,7 @@ export interface TableEvent extends TraceBase {
 export interface DecisionEvent extends TraceBase {
   type: 'decision';
   node: string;
-  action: 'flood' | 'forward' | 'lpm' | 'ttl' | 'local' | 'nexthop' | 'reply' | 'icmp-error' | 'queue' | 'fragment' | 'reassemble';
+  action: 'flood' | 'forward' | 'lpm' | 'ttl' | 'local' | 'nexthop' | 'reply' | 'icmp-error' | 'queue' | 'fragment' | 'reassemble' | 'tcp' | 'udp';
   /** Egress interfaces involved, if any. */
   ifaces?: string[];
 }
@@ -90,7 +91,7 @@ export interface DecisionEvent extends TraceBase {
 export interface AppEvent extends TraceBase {
   type: 'app';
   node: string;
-  app: 'ping' | 'traceroute' | 'pmtud' | 'mtr';
+  app: 'ping' | 'traceroute' | 'pmtud' | 'mtr' | 'tcp' | 'udp';
   sessionId: string;
   status: 'start' | 'sent' | 'reply' | 'timeout' | 'error' | 'hop' | 'done';
 }

@@ -116,6 +116,29 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
           return { say: `Nobody answered "who has ${ip}?" three times. Giving up.`, why: 'No device on this LAN owns that IP (or it is switched off).', concept: 'unreachable', weight: 'key', tone: 'bad' };
         return { say: `My ARP entry for ${ipLabel(ctx, ip)} expired after 60 s. I'll ask again next time.`, concept: 'aging', weight: 'key', tone: 'muted' };
       }
+      if (e.table === 'tcp') {
+        const st = m(/→ (\w+)\]$/, t)[1];
+        const [, , rip, rport] = m(/^([\d.]+):(\d+)-([\d.]+):(\d+)$/, e.key);
+        const peer = `${ipLabel(ctx, rip)}:${rport}`;
+        const S: Record<string, Explanation> = {
+          SYN_SENT: { say: `Opening a TCP connection to ${peer}. State SYN_SENT: waiting for its SYN-ACK.`, concept: 'handshake', weight: 'key', tone: 'info' },
+          SYN_RCVD: { say: `${peer} wants to connect. State SYN_RCVD: I've answered and wait for the final ACK.`, why: 'A SYN flood fills a server with half-open connections in this state.', concept: 'tcp-states', weight: 'key', tone: 'info' },
+          ESTABLISHED: { say: `Connection to ${peer} ESTABLISHED: we both know each other's starting sequence numbers. Data can flow.`, concept: 'handshake', weight: 'key', tone: 'good' },
+          FIN_WAIT_1: { say: `I've sent everything, so I send FIN (FIN_WAIT_1) and wait for it to be acknowledged.`, concept: 'tcp-close', weight: 'key', tone: 'info' },
+          FIN_WAIT_2: { say: `My FIN was acknowledged (FIN_WAIT_2). ${peer} can still send; I wait for its FIN.`, concept: 'tcp-close', weight: 'key', tone: 'info' },
+          CLOSE_WAIT: { say: `${peer} sent FIN: it's done sending. I'm in CLOSE_WAIT until I close my side too.`, concept: 'tcp-close', weight: 'key', tone: 'info' },
+          LAST_ACK: { say: 'Closing my side too: FIN sent, waiting for the last ACK (LAST_ACK).', concept: 'tcp-close', weight: 'key', tone: 'info' },
+          CLOSING: { say: 'Both sides sent FIN at the same time (CLOSING).', concept: 'tcp-close', weight: 'key', tone: 'info' },
+          TIME_WAIT: { say: 'Both FINs are acknowledged. I linger in TIME_WAIT for 2×MSL in case my last ACK got lost.', concept: 'tcp-close', weight: 'key', tone: 'muted' },
+        };
+        if (st === 'CLOSED') {
+          if (/refused/.test(t)) return { say: `${peer} answered my SYN with RST: connection refused, nothing listens there.`, concept: 'rst', weight: 'key', tone: 'bad' };
+          if (/timed out/.test(t)) return { say: `Giving up on ${peer}: no answer even after retries.`, concept: 'retransmission', weight: 'key', tone: 'bad' };
+          if (/reset/.test(t)) return { say: `${peer} reset the connection (RST).`, concept: 'rst', weight: 'key', tone: 'bad' };
+          return { say: `Connection with ${peer} is fully closed.`, concept: 'tcp-close', weight: 'key', tone: 'good' };
+        }
+        return S[st ?? ''] ?? { say: t, concept: 'tcp-states', weight: 'key', tone: 'info' };
+      }
       if (e.table === 'pmtu') {
         const [, mtu] = m(/is (\d+)/, t);
         return {
@@ -239,6 +262,63 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
         }
         case 'local':
           return { say: t.replace(/^\S+ /, ''), weight: 'minor', tone: 'muted' };
+        case 'tcp': {
+          if (/sends SYN to/.test(t)) {
+            const [, dst, isn, mss] = m(/SYN to (\S+): seq=0 \(ISN (\d+)\), MSS (\d+)/, t);
+            return { say: `Handshake step 1: SYN to ${dst}. My first sequence number is random (${isn}), shown as 0. I can take segments up to ${mss} bytes (MSS).`, concept: 'handshake', weight: 'key', tone: 'info' };
+          }
+          if (/sends SYN-ACK/.test(t)) {
+            const [, mss] = m(/MSS (\d+)/, t);
+            return { say: `Handshake step 2: SYN-ACK. I accept, pick my own random starting number, and acknowledge theirs (+1). My MSS is ${mss}.`, concept: 'handshake', weight: 'key', tone: 'info' };
+          }
+          if (/third step of the handshake/.test(t)) return { say: 'Handshake step 3: ACK. Both sides are synchronised: connection open.', concept: 'handshake', weight: 'key', tone: 'good' };
+          if (/sends ACK .*acknowledging their FIN/.test(t)) return { say: 'ACKing their FIN: I know they are done sending.', concept: 'tcp-close', weight: 'key', tone: 'info' };
+          if (/sends ACK ack=/.test(t)) {
+            const [, k] = m(/ack=(\d+)/, t);
+            const [, n] = m(/received (\d+) bytes/, t);
+            return { say: `Got ${n} bytes. ACK ${k} means "send me byte ${k} next".`, concept: 'seq-ack', weight: 'key', tone: 'good' };
+          }
+          if (/sends \d+ bytes to/.test(t)) {
+            const [, n, a, b, mss] = m(/sends (\d+) bytes to .*\(bytes (\d+)–(\d+)\), MSS (\d+)/, t);
+            return { say: `Sending bytes ${a}–${b} (${n} bytes, at most one MSS = ${mss}) as one segment.`, concept: 'segmentation', weight: 'key', tone: 'info' };
+          }
+          if (/sends FIN/.test(t)) return { say: "I've sent all my data: FIN says \"no more from me\".", concept: 'tcp-close', weight: 'key', tone: 'info' };
+          if (/sends RST/.test(t)) {
+            const [, port] = m(/port (\d+) is closed/, t);
+            return { say: `Nothing listens on port ${port} here, so I answer RST.`, concept: 'rst', weight: 'key', tone: 'bad' };
+          }
+          if (/waits: /.test(t)) return { say: "The peer's receive window is full of unacknowledged data: waiting for ACKs.", concept: 'tcp-window', weight: 'key', tone: 'warn' };
+          if (/got ACK \d+/.test(t)) {
+            const [, k, n] = m(/got ACK (\d+): (\d+)/, t);
+            return { say: `ACK ${k}: ${n} more bytes confirmed delivered.`, concept: 'seq-ack', weight: 'minor', tone: 'good' };
+          }
+          if (/retransmission timeout/.test(t)) {
+            const [, ms, seq, next] = m(/after (\d+) ms: no ACK for seq=(\d+).*next timeout (\d+) ms/, t);
+            return { say: `No ACK for byte ${seq} within ${ms} ms: I assume it was lost and resend. Next time I'll wait ${next} ms (backoff).`, concept: 'retransmission', weight: 'key', tone: 'bad' };
+          }
+          if (/3 duplicate ACKs/.test(t)) {
+            const [, seq] = m(/for (\d+):/, t);
+            return { say: `Three duplicate ACKs for ${seq}: that segment was lost but later ones arrived. Fast retransmit, no waiting for the timer.`, concept: 'retransmission', weight: 'key', tone: 'warn' };
+          }
+          if (/a segment before it is missing/.test(t)) {
+            const [, got, want] = m(/seq=(\d+) but expected (\d+)/, t);
+            return { say: `Segment ${got} arrived, but byte ${want} is still missing. I keep asking for ${want} (duplicate ACK).`, concept: 'seq-ack', weight: 'key', tone: 'warn' };
+          }
+          if (/duplicate segment/.test(t)) return { say: 'Got data I already have (a retransmission). Re-ACKing.', concept: 'retransmission', weight: 'minor', tone: 'muted' };
+          if (/lowers MSS/.test(t)) {
+            const [, a, b] = m(/from (\d+) to (\d+)/, t);
+            return { say: `The path can't carry my segments: shrinking them from ${a} to ${b} bytes and resending what's unacknowledged.`, why: 'TCP sets DF on every segment and listens for "Fragmentation Needed" (PMTUD).', concept: 'mss', weight: 'key', tone: 'warn' };
+          }
+          if (/web server/.test(t)) {
+            const [, n] = m(/sending a (\d+)-byte response/, t);
+            return { say: `Request received on port 80: sending a ${n}-byte response, then closing.`, concept: 'port-number', weight: 'key', tone: 'info' };
+          }
+          return { say: t.replace(/^\S+ /, ''), concept: 'tcp', weight: 'minor', tone: 'info' };
+        }
+        case 'udp': {
+          const [, n, to] = m(/sends the (\d+) bytes back to (\S+)/, t);
+          return { say: `Echo service on UDP port 7: sending the same ${n} bytes back to ${to}. No connection needed.`, concept: 'udp', weight: 'key', tone: 'good' };
+        }
         case 'fragment': {
           const size = m(/(\d+)-byte/, t)[1];
           const iface = m(/fit (\S+)'s/, t)[1];
@@ -333,6 +413,10 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
         }
         case 'reassembly-timeout':
           return { say: 'Some fragments never arrived. After 30 s I throw the pieces away. One lost fragment = the whole packet is lost.', concept: 'reassembly', weight: 'key', tone: 'bad' };
+        case 'port-closed':
+          return /UDP/.test(t)
+            ? { say: `Nothing listens on UDP port ${m(/port (\d+)/, t)[1]}. I reply ICMP "Port Unreachable".`, concept: 'udp', weight: 'key', tone: 'bad' }
+            : { say: `Nothing listens on TCP port ${m(/port (\d+)/, t)[1]}. I reply RST.`, concept: 'rst', weight: 'key', tone: 'bad' };
         case 'link-loss':
           return { say: 'A frame was lost on the cable before it reached me.', concept: 'packet-loss', weight: 'key', tone: 'bad' };
         default:
@@ -347,6 +431,22 @@ export function explain(e: TraceEvent, ctx: ExplainCtx): Explanation {
         if (e.status === 'start') return { say: 'Path MTU discovery: I send big packets with DF set and shrink them whenever a router says "too big".', concept: 'pmtud', weight: 'key', tone: 'info' };
         if (e.status === 'error') return { say: body.replace(/^(\S+) says: too big, next-hop MTU (\d+)/, (_, r, n) => `${ipLabel(ctx, r)} says the next link only takes ${n} bytes. Trying again at ${n}.`), concept: 'df', weight: 'key', tone: 'warn' };
         return { say: body.replace(/^probe/, 'Probing with'), concept: 'pmtud', weight: e.status === 'hop' ? 'key' : 'minor', tone: e.status === 'reply' ? 'good' : 'info' };
+      }
+      if (e.app === 'tcp') {
+        if (e.status === 'start') return { say: `Opening a TCP connection: ${body.replace(/^TCP connect to /, 'to ')}.`, concept: 'tcp', weight: 'key', tone: 'info' };
+        if (e.status === 'sent') return { say: body, weight: 'minor', tone: 'info' };
+        if (/^connected/.test(body)) return { say: `Connected: ${body.replace(/^connected /, '')}.`, concept: 'handshake', weight: 'key', tone: 'good' };
+        if (/^server closed/.test(body)) return { say: `The server sent its FIN: ${body.replace(/^server closed /, '')}.`, concept: 'tcp-close', weight: 'key', tone: 'good' };
+        if (e.status === 'error') return { say: body, concept: /refused/.test(body) ? 'rst' : 'retransmission', weight: 'key', tone: 'bad' };
+        return { say: body.replace(/^done: /, 'Finished: '), concept: 'tcp', weight: 'key', tone: /failed/.test(body) ? 'bad' : 'good' };
+      }
+      if (e.app === 'udp') {
+        if (e.status === 'sent') return { say: body, weight: 'minor', tone: 'info' };
+        if (e.status === 'start') return { say: `Sending UDP datagrams: ${body.replace(/^UDP /, '')}.`, concept: 'udp', weight: 'key', tone: 'info' };
+        if (e.status === 'reply') return { say: `Echo came back: ${body}.`, concept: 'udp', weight: 'key', tone: 'good' };
+        if (e.status === 'timeout') return { say: 'No answer, and UDP never resends: that datagram is simply gone.', concept: 'udp', weight: 'key', tone: 'bad' };
+        if (e.status === 'error') return { say: body.replace(/^From (\S+): port (\d+) unreachable.*/, (_, f, p) => `${ipLabel(ctx, f)} says nothing listens on port ${p} (ICMP Port Unreachable).`), concept: 'port-number', weight: 'key', tone: 'bad' };
+        return { say: body, concept: 'udp', weight: 'key', tone: 'good' };
       }
       if (e.app === 'mtr') {
         if (e.status === 'start') return { say: `MTR: probing every hop to ${body.split(' ')[2]?.replace(':', '')} several times to measure loss and delay per hop.`, concept: 'mtr', weight: 'key', tone: 'info' };
@@ -425,6 +525,29 @@ export function explainPacket(tx: TxEvent, ctx: ExplainCtx): PacketStory {
       say: `A slice of a bigger packet (id ${p.identification}) from ${ipLabel(ctx, p.src)}: bytes ${from}–${from + len - 1}. ${p.flags & 1 ? 'More fragments follow.' : 'This is the last piece.'} Only ${ipLabel(ctx, p.dst)} will put it back together. ${hop}`,
       concept: 'fragmentation',
     };
+  }
+  if (p.kind === 'ipv4' && p.payload.kind === 'udp') {
+    const u = p.payload;
+    return {
+      title: `UDP ${u.srcPort} → ${u.dstPort} · ${u.data.length} bytes`,
+      say: `A standalone UDP message from ${ipLabel(ctx, p.src)} port ${u.srcPort} to ${ipLabel(ctx, p.dst)} port ${u.dstPort}. No handshake, no ACK: if it's lost, it's gone. ${hop}`,
+      concept: 'udp',
+    };
+  }
+  if (p.kind === 'ipv4' && p.payload.kind === 'tcp') {
+    const s = p.payload;
+    const f = s.flags;
+    const names = [f & 2 && 'SYN', f & 16 && 'ACK', f & 8 && 'PSH', f & 1 && 'FIN', f & 4 && 'RST'].filter(Boolean).join(', ');
+    const who = `${ipLabel(ctx, p.src)}:${s.srcPort} → ${ipLabel(ctx, p.dst)}:${s.dstPort}`;
+    let say: string;
+    let concept: ConceptId = 'tcp';
+    if (f & 4) [say, concept] = [`RST from ${who}: "no such connection / port closed".`, 'rst'];
+    else if (f & 2 && !(f & 16)) [say, concept] = [`SYN (step 1 of the handshake) ${who}: "let's talk, my numbers start at ${s.seq}". Carries MSS ${s.options.find((o) => o.kind === 2)?.mss ?? '?'}.`, 'handshake'];
+    else if (f & 2) [say, concept] = [`SYN-ACK (step 2) ${who}: "OK, my numbers start at ${s.seq}; I got yours".`, 'handshake'];
+    else if (f & 1) [say, concept] = [`FIN ${who}: "I have nothing more to send".`, 'tcp-close'];
+    else if (s.data.length) [say, concept] = [`${s.data.length} bytes of the stream ${who}. It also acknowledges data from the other side (ack ${s.ack}).`, 'segmentation'];
+    else [say, concept] = [`A bare ACK ${who}: "I have everything before byte ${s.ack}".`, 'seq-ack'];
+    return { title: `TCP [${names}] ${s.srcPort} → ${s.dstPort}${s.data.length ? ` · ${s.data.length} B` : ''}`, say: `${say} ${hop}`, concept };
   }
   if (p.kind === 'ipv4' && p.payload.kind === 'icmp') {
     const q = p.payload;

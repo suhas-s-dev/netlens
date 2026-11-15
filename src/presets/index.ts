@@ -3,6 +3,7 @@ import routerChain from './router-chain.json';
 import singleLan from './single-lan.json';
 import twoLans from './two-lans.json';
 import mtuBottleneck from './mtu-bottleneck.json';
+import tcpUdp from './tcp-udp.json';
 
 export interface Preset {
   id: string;
@@ -14,4 +15,5 @@ export const PRESETS: Preset[] = [
   { id: 'two-lans', topology: twoLans as TopologyJson },
   { id: 'router-chain', topology: routerChain as TopologyJson },
   { id: 'mtu-bottleneck', topology: mtuBottleneck as TopologyJson },
+  { id: 'tcp-udp', topology: tcpUdp as TopologyJson },
 ];

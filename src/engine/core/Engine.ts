@@ -9,7 +9,7 @@
  * only through commands (`ping`, `traceroute`, ...) and the clock (`step`, `runUntil`).
  */
 import type { Device, Port, SendMeta } from '../devices/Device';
-import { Host, type MtrOptions, type PingOptions, type TracerouteOptions } from '../devices/Host';
+import { Host, type MtrOptions, type PingOptions, type TcpFetchOptions, type TracerouteOptions, type UdpOptions } from '../devices/Host';
 import type { DeviceState } from '../devices/state';
 import type { Frame } from '../model/frame';
 import { encodeFrame } from '../model/frame';
@@ -228,6 +228,16 @@ export class Engine {
     return this.host(hostId, dst).startPmtud(dst);
   }
 
+  /** curl-like TCP exchange: connect, request `bytes`, read the response, close. */
+  tcpFetch(hostId: string, dst: string, opts?: TcpFetchOptions): string {
+    return this.host(hostId, dst).startTcpFetch(dst, opts);
+  }
+
+  /** Send UDP datagrams (port 7 = echo service). */
+  udp(hostId: string, dst: string, opts?: UdpOptions): string {
+    return this.host(hostId, dst).startUdp(dst, opts);
+  }
+
   /** MTR: repeated per-hop probing with loss/latency statistics. */
   mtr(hostId: string, dst: string, opts?: MtrOptions): string {
     return this.host(hostId, dst).startMtr(dst, opts);
@@ -248,6 +258,17 @@ export class Engine {
           this.ping(s.node, s.dst, o);
         } else if (s.action === 'pmtud') {
           this.pmtud(s.node, s.dst);
+        } else if (s.action === 'tcp') {
+          const o: TcpFetchOptions = {};
+          if (s.port !== undefined) o.port = s.port;
+          if (s.bytes !== undefined) o.bytes = s.bytes;
+          this.tcpFetch(s.node, s.dst, o);
+        } else if (s.action === 'udp') {
+          const o: UdpOptions = {};
+          if (s.port !== undefined) o.port = s.port;
+          if (s.count !== undefined) o.count = s.count;
+          if (s.size !== undefined) o.size = s.size;
+          this.udp(s.node, s.dst, o);
         } else if (s.action === 'mtr') {
           this.mtr(s.node, s.dst, s.rounds !== undefined ? { rounds: s.rounds } : {});
         } else {

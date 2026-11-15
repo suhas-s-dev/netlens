@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { formatDuration, type ArpRow, type DeviceState, type MacRow, type RouteRow } from '../engine';
+import { formatDuration, type ArpRow, type DeviceState, type MacRow, type RouteRow, type TcpRow } from '../engine';
 import { COLUMN_NOTES } from '../learn/fieldNotes';
 import { sim, useSim, type Highlight } from '../state/sim';
 import { ConceptCard, Q } from './learn/ConceptCard';
@@ -214,6 +214,53 @@ function Activity({ nodeId }: { nodeId: string }) {
   );
 }
 
+function TcpTable({ nodeId, rows }: { nodeId: string; rows: TcpRow[] }) {
+  const hls = useHighlights(nodeId, 'tcp');
+  const present = new Set(rows.map((r) => `|${r.id}`));
+  return (
+    <table className="tbl">
+      <thead>
+        <tr>
+          <th>Remote</th>
+          <th>State</th>
+          <th title="Bytes sent / received">Sent / recv</th>
+          <th title="Unacknowledged bytes in flight">In flight</th>
+          <th title="Retransmission timeout; smoothed RTT">RTO</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.length === 0 && ![...hls.keys()].some((k) => !present.has(k)) && (
+          <tr>
+            <td colSpan={5} className="dim">
+              no connections
+            </td>
+          </tr>
+        )}
+        {rows.map((r) => {
+          const hl = hls.get(`|${r.id}`);
+          return (
+            <HRow key={`${r.id}-${hl?.at ?? 0}`} hl={hl}>
+              <td title={`local ${r.local}`}>{r.remote}</td>
+              <td>
+                <span className={`pill tcp-${r.state}`}>{r.state}</span>
+              </td>
+              <td>
+                {r.sent} / {r.received}
+              </td>
+              <td>{r.unacked}</td>
+              <td className="dim">
+                {r.rtoMs} ms{r.srttMs !== null ? ` (rtt ${r.srttMs})` : ''}
+                {r.retransmissions ? ` · ${r.retransmissions} rexmit` : ''}
+              </td>
+            </HRow>
+          );
+        })}
+        <Ghosts hls={hls} present={present} cols={5} />
+      </tbody>
+    </table>
+  );
+}
+
 const TABLE_GUIDE = {
   host: 'Its ARP cache: the IP → MAC answers it has learned. Empty means its next packet will start with an ARP broadcast.',
   switch: 'Its MAC table: which device is behind which port. Watch it fill up as frames arrive. Unknown destinations get flooded.',
@@ -251,6 +298,13 @@ export function DevicePanel({ nodeId }: { nodeId: string }) {
             ARP cache <Q id="arp-cache" />
           </h4>
           <ArpTable nodeId={nodeId} rows={st.arp} showIface={false} />
+          <h4>
+            TCP connections <Q id="tcp-states" />
+          </h4>
+          <TcpTable nodeId={nodeId} rows={st.tcp} />
+          <div className="hint">
+            Listening: TCP {st.listening.tcp.join(', ')} (web server), UDP {st.listening.udp.join(', ')} (echo). Any other port is closed. <Q id="port-number" />
+          </div>
           {st.pmtu.length > 0 && (
             <>
               <h4>

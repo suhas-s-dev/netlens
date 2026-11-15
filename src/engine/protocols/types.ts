@@ -6,7 +6,8 @@ export const ETHERTYPE_IPV4 = 0x0800;
 export const ETHERTYPE_ARP = 0x0806;
 
 export const IPPROTO_ICMP = 1;
-// Phase 2: IPPROTO_TCP = 6, IPPROTO_UDP = 17
+export const IPPROTO_TCP = 6;
+export const IPPROTO_UDP = 17;
 
 export interface RawPayload {
   kind: 'raw';
@@ -60,7 +61,54 @@ export interface Ipv4Packet {
   payload: Ipv4Payload;
 }
 
-export type Ipv4Payload = IcmpMessage | RawPayload;
+export type Ipv4Payload = IcmpMessage | UdpDatagram | TcpSegment | RawPayload;
+
+/** UDP (RFC 768). */
+export interface UdpDatagram {
+  kind: 'udp';
+  srcPort: number;
+  dstPort: number;
+  /** Header + data, bytes. */
+  length: number;
+  checksum: number;
+  data: Uint8Array;
+}
+
+export const TCP_FIN = 0x01;
+export const TCP_SYN = 0x02;
+export const TCP_RST = 0x04;
+export const TCP_PSH = 0x08;
+export const TCP_ACK = 0x10;
+export const TCP_URG = 0x20;
+
+export const TCPOPT_EOL = 0;
+export const TCPOPT_NOP = 1;
+export const TCPOPT_MSS = 2;
+
+export interface TcpOption {
+  kind: number;
+  /** For MSS (kind 2). */
+  mss?: number;
+  /** Unparsed option body for other kinds. */
+  raw?: Uint8Array;
+}
+
+/** TCP (RFC 9293). seq/ack are absolute 32-bit values. */
+export interface TcpSegment {
+  kind: 'tcp';
+  srcPort: number;
+  dstPort: number;
+  seq: number;
+  ack: number;
+  /** Header length in 32-bit words. */
+  dataOffset: number;
+  flags: number;
+  window: number;
+  checksum: number;
+  urgent: number;
+  options: TcpOption[];
+  data: Uint8Array;
+}
 
 export const ICMP_ECHO_REPLY = 0;
 export const ICMP_DEST_UNREACHABLE = 3;

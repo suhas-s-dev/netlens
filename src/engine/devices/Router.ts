@@ -19,6 +19,12 @@ import {
   ICMP_UNREACH_HOST,
   ICMP_UNREACH_NEEDFRAG,
   ICMP_UNREACH_NET,
+  ICMP_UNREACH_PORT,
+  IPPROTO_TCP,
+  TCP_ACK,
+  TCP_FIN,
+  TCP_RST,
+  TCP_SYN,
   ICMP_TIMX_REASS,
   IPPROTO_ICMP,
   isIcmpEcho,
@@ -29,6 +35,7 @@ import { ArpResolver, type ArpConfig, type QueuedPacket } from './ArpResolver';
 import { Device, type Port, type PortInit, type SendMeta } from './Device';
 import { ipOutput, Reassembler } from './ipOutput';
 import { isFragment } from '../protocols/ipv4';
+import { makeTcp } from '../protocols/tcp';
 import { buildRoutingTable, cidr, longestPrefixMatch, type Route, type StaticRouteSpec } from './routing';
 import type { RouterState } from './state';
 import { portViews } from './Switch';
@@ -156,6 +163,22 @@ export class Router extends Device {
       this.decision('reply', `${this.name} answering echo request to ${ip.dst} from ${ip.src} (seq=${m.sequence})`, { ifaces: [port.id], packetId: frame.id, flowId: frame.flowId });
       const reply = makeIpv4({ src: ip.dst, dst: ip.src, protocol: IPPROTO_ICMP, identification: this.nextIpId(), payload: makeEcho(ICMP_ECHO_REPLY, m.identifier, m.sequence, m.data) });
       this.originate(reply, { flowId: this.engine.newFlowId(), parentId: frame.id });
+      return;
+    }
+    if (m.kind === 'udp') {
+      this.drop('port-closed', `${this.name}: nothing listens on UDP port ${m.dstPort}; sending ICMP Port Unreachable to ${ip.src}`, { packetId: frame.id, flowId: frame.flowId });
+      this.sendIcmpError(ip, ICMP_DEST_UNREACHABLE, ICMP_UNREACH_PORT, frame, true);
+      return;
+    }
+    if (m.kind === 'tcp') {
+      if (m.flags & TCP_RST) return;
+      this.drop('port-closed', `${this.name}: nothing listens on TCP port ${m.dstPort}; answering with RST`, { packetId: frame.id, flowId: frame.flowId });
+      const len = m.data.length + (m.flags & TCP_SYN ? 1 : 0) + (m.flags & TCP_FIN ? 1 : 0);
+      const rst =
+        m.flags & TCP_ACK
+          ? makeTcp(ip.dst, ip.src, { srcPort: m.dstPort, dstPort: m.srcPort, seq: m.ack, ack: 0, flags: TCP_RST, window: 0 })
+          : makeTcp(ip.dst, ip.src, { srcPort: m.dstPort, dstPort: m.srcPort, seq: 0, ack: (m.seq + len) >>> 0, flags: TCP_RST | TCP_ACK, window: 0 });
+      this.originate(makeIpv4({ src: ip.dst, dst: ip.src, protocol: IPPROTO_TCP, identification: this.nextIpId(), payload: rst }), { flowId: this.engine.newFlowId(), parentId: frame.id });
       return;
     }
     this.decision('local', `${this.name} received ${m.kind === 'icmp' ? icmpTypeName(m.type, m.code) : `protocol ${ip.protocol}`} from ${ip.src} addressed to itself; no handler`, {

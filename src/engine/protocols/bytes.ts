@@ -1,7 +1,7 @@
 /** Byte-level writer/reader that records which header field produced each byte range.
  * The span map drives the hex view's field <-> byte highlighting. */
 
-export type LayerName = 'Ethernet II' | 'ARP' | 'IPv4' | 'ICMP' | 'Data';
+export type LayerName = 'Ethernet II' | 'ARP' | 'IPv4' | 'ICMP' | 'UDP' | 'TCP' | 'Data';
 
 export interface FieldSpan {
   layer: LayerName;

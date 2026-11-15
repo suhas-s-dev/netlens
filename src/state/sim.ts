@@ -372,6 +372,14 @@ export class SimController {
     this.command(() => this.engine.ping(hostId, dst, { count, ...extra }));
   }
 
+  tcp(hostId: string, dst: string, port = 80, bytes = 4000): void {
+    this.command(() => this.engine.tcpFetch(hostId, dst, { port, bytes }));
+  }
+
+  udp(hostId: string, dst: string, port = 7, count = 3, size = 64): void {
+    this.command(() => this.engine.udp(hostId, dst, { port, count, size }));
+  }
+
   pmtud(hostId: string, dst: string): void {
     this.command(() => this.engine.pmtud(hostId, dst));
   }

@@ -1,14 +1,14 @@
 /** Layer-by-layer header inspector + hex dump with field <-> byte highlighting. */
 import { useMemo, useState } from 'react';
-import { encodeFrame, formatDuration, summarizeFrame, type FieldSpan, type LayerName, type TxEvent } from '../engine';
+import { encodeFrame, formatDuration, summarizeFrame, type EncodedFrame, type FieldSpan, type LayerName, type TxEvent } from '../engine';
 import { PACKET_COLORS, PACKET_LABELS } from '../render/colors';
 import { FIELD_CONCEPT, FIELD_NOTES, LAYER_BLURB, LAYER_CONCEPT } from '../learn/fieldNotes';
 import { explainPacket } from '../learn/explain';
 import { sim, useSim } from '../state/sim';
 import { ConceptCard, Q } from './learn/ConceptCard';
 
-const LAYER_CLASS: Record<LayerName, string> = { 'Ethernet II': 'L-eth', ARP: 'L-arp', IPv4: 'L-ipv4', ICMP: 'L-icmp', Data: 'L-data' };
-const LAYER_COLOR: Record<LayerName, string> = { 'Ethernet II': '#9fb7cf', ARP: 'var(--arp)', IPv4: '#b9a3ff', ICMP: '#7cc4ff', Data: '#9aa4b2' };
+const LAYER_CLASS: Record<LayerName, string> = { 'Ethernet II': 'L-eth', ARP: 'L-arp', IPv4: 'L-ipv4', ICMP: 'L-icmp', UDP: 'L-udp', TCP: 'L-tcp', Data: 'L-data' };
+const LAYER_COLOR: Record<LayerName, string> = { 'Ethernet II': '#9fb7cf', ARP: 'var(--arp)', IPv4: '#b9a3ff', ICMP: '#7cc4ff', UDP: '#fde047', TCP: '#fb923c', Data: '#9aa4b2' };
 
 function nodeName(id: string): string {
   return useSim.getState().topology.nodes.find((n) => n.id === id)?.name ?? id;
@@ -50,41 +50,43 @@ interface Seg {
 }
 
 /** Header-by-header size breakdown, with the IP packet measured against the egress MTU. */
-function Anatomy({ tx, fields }: { tx: TxEvent; fields: FieldSpan[] }) {
-  const span = (pred: (f: FieldSpan) => boolean) => fields.filter(pred).reduce((n, f) => (f.bits ? n : n + (f.end - f.start)), 0);
-  const ipHdr = span((f) => f.layer === 'IPv4');
-  const icmpData = span((f) => f.key === 'icmp.data' || f.key === 'icmp.original');
-  const icmpHdr = span((f) => f.layer === 'ICMP') - icmpData;
-  const frag = span((f) => f.key === 'data.fragment' || f.key === 'data');
-  const arp = span((f) => f.layer === 'ARP');
-  const pad = span((f) => f.key === 'eth.padding');
-  const segs: Seg[] = [
-    { label: 'Eth', bytes: 14, cls: 'eth', title: 'Ethernet header: 14 bytes (not counted in the MTU)' },
-    ...(arp ? [{ label: 'ARP', bytes: arp, cls: 'arp', title: 'ARP message: 28 bytes' }] : []),
-    ...(ipHdr ? [{ label: 'IP', bytes: ipHdr, cls: 'ipv4', title: `IPv4 header: ${ipHdr} bytes` }] : []),
-    ...(icmpHdr > 0 ? [{ label: 'ICMP', bytes: icmpHdr, cls: 'icmp', title: `ICMP header: ${icmpHdr} bytes` }] : []),
-    ...(icmpData ? [{ label: 'data', bytes: icmpData, cls: 'data', title: `Payload: ${icmpData} bytes` }] : []),
-    ...(frag ? [{ label: 'fragment', bytes: frag, cls: 'data', title: `Fragment data: ${frag} bytes` }] : []),
-    ...(pad ? [{ label: 'pad', bytes: pad, cls: 'pad', title: `Padding to the 60-byte minimum: ${pad} bytes` }] : []),
-    { label: 'FCS', bytes: 4, cls: 'fcs', title: 'Frame check sequence: 4 bytes (added by the NIC; not in the hex view)' },
-  ];
-  const total = segs.reduce((n, s) => n + s.bytes, 0);
+function Anatomy({ tx, enc }: { tx: TxEvent; enc: EncodedFrame }) {
+  const fieldLen = (keys: string[]) => enc.fields.filter((f) => keys.includes(f.key)).reduce((n, f) => n + (f.end - f.start), 0);
+  const pad = fieldLen(['eth.padding']);
+  const segs: Seg[] = [];
+  for (const l of enc.layers) {
+    const len = l.end - l.start;
+    if (l.layer === 'Ethernet II') segs.push({ label: 'Eth', bytes: len, cls: 'eth', title: `Ethernet header: ${len} bytes (not counted in the MTU)` });
+    else if (l.layer === 'IPv4') segs.push({ label: 'IP', bytes: len, cls: 'ipv4', title: `IPv4 header: ${len} bytes` });
+    else if (l.layer === 'ARP') segs.push({ label: 'ARP', bytes: len, cls: 'arp', title: `ARP message: ${len} bytes` });
+    else {
+      const name = l.layer === 'Data' ? 'data' : l.layer;
+      const data = l.layer === 'Data' ? 0 : fieldLen([`${l.layer.toLowerCase()}.data`, 'icmp.original']);
+      if (len - data > 0) segs.push({ label: name, bytes: len - data, cls: l.layer.toLowerCase(), title: `${name} ${l.layer === 'Data' ? '' : 'header'}: ${len - data} bytes` });
+      if (data) segs.push({ label: 'data', bytes: data, cls: 'data', title: `Payload: ${data} bytes` });
+    }
+  }
+  const frag = fieldLen(['data.fragment']);
+  if (frag) segs.push({ label: 'fragment', bytes: frag, cls: 'data', title: `Fragment data: ${frag} bytes` });
+  if (pad) segs.push({ label: 'pad', bytes: pad, cls: 'pad', title: `Padding to the 60-byte minimum: ${pad} bytes` });
+  segs.push({ label: 'FCS', bytes: 4, cls: 'fcs', title: 'Frame check sequence: 4 bytes (added by the NIC; not in the hex view)' });
+  const total = enc.bytes.length + 4;
   const p = tx.frame.eth.payload;
   const mtu = sim.state(tx.node)?.ports.find((x) => x.id === tx.iface)?.mtu ?? 1500;
   const ipLen = p.kind === 'ipv4' ? p.totalLength : 0;
   return (
     <div className="anatomy">
       <div className="anat-bar">
-        {segs.map((s, i) => (
-          <div key={i} className={`seg-${s.cls}`} style={{ flexGrow: Math.max(s.bytes, total * 0.035) }} title={s.title}>
+        {segs.map((sg, i) => (
+          <div key={i} className={`seg-${sg.cls}`} style={{ flexGrow: Math.max(sg.bytes, total * 0.04) }} title={sg.title}>
             <span>
-              {s.label} {s.bytes}
+              {sg.label} {sg.bytes}
             </span>
           </div>
         ))}
       </div>
       <div className="hint">
-        Frame {total} bytes on the wire (+8 preamble, +12 gap).
+        Frame {total} bytes (+8 preamble, +12 gap on the wire).
         {ipLen > 0 && (
           <>
             {' '}
@@ -158,7 +160,7 @@ export function PacketInspector({ packetId }: { packetId: string }) {
       <h4>
         Packet anatomy <Q id="mtu" />
       </h4>
-      <Anatomy tx={tx} fields={enc.fields} />
+      <Anatomy tx={tx} enc={enc} />
       <ConceptCard id="encapsulation" title="Why does a packet have layers?" />
       <table className="tbl wrap">
         <tbody>

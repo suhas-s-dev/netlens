@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "name": "TCP & UDP",
+  "description": "A client and two servers across a router. Watch the TCP 3-way handshake, MSS, segmentation, ACKs and FIN teardown; a refused connection (RST); UDP echo vs ICMP Port Unreachable; a UDP datagram too big for one packet; and TCP retransmissions over a lossy link to FLAKY.",
+  "seed": 1,
+  "nodes": [
+    { "id": "h1", "name": "H1", "type": "host", "position": { "x": -14, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.10/24" }], "gateway": "10.0.1.1" },
+    { "id": "sw1", "name": "SW1", "type": "switch", "position": { "x": -8, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] },
+    { "id": "r1", "name": "R1", "type": "router", "position": { "x": -1, "y": 0 }, "interfaces": [{ "id": "eth0", "ip": "10.0.1.1/24" }, { "id": "eth1", "ip": "10.0.2.1/24" }], "staticRoutes": [] },
+    { "id": "sw2", "name": "SW2", "type": "switch", "position": { "x": 6, "y": 0 }, "interfaces": [{ "id": "1" }, { "id": "2" }, { "id": "3" }, { "id": "4" }] },
+    { "id": "web", "name": "WEB", "type": "host", "position": { "x": 12, "y": -4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.2.80/24" }], "gateway": "10.0.2.1" },
+    { "id": "flaky", "name": "FLAKY", "type": "host", "position": { "x": 12, "y": 4 }, "interfaces": [{ "id": "eth0", "ip": "10.0.2.90/24" }], "gateway": "10.0.2.1" }
+  ],
+  "links": [
+    { "id": "l1", "a": { "node": "h1", "iface": "eth0" }, "b": { "node": "sw1", "iface": "1" } },
+    { "id": "l2", "a": { "node": "sw1", "iface": "4" }, "b": { "node": "r1", "iface": "eth0" } },
+    { "id": "l3", "a": { "node": "r1", "iface": "eth1" }, "b": { "node": "sw2", "iface": "4" } },
+    { "id": "l4", "a": { "node": "web", "iface": "eth0" }, "b": { "node": "sw2", "iface": "1" } },
+    { "id": "l5", "a": { "node": "flaky", "iface": "eth0" }, "b": { "node": "sw2", "iface": "2" }, "lossPercent": 20 }
+  ],
+  "scenario": [
+    { "at": 0, "action": "tcp", "node": "h1", "dst": "10.0.2.80", "bytes": 4000 },
+    { "at": 2500, "action": "tcp", "node": "h1", "dst": "10.0.2.80", "port": 22 },
+    { "at": 3500, "action": "udp", "node": "h1", "dst": "10.0.2.80", "port": 7, "count": 2, "size": 64 },
+    { "at": 4500, "action": "udp", "node": "h1", "dst": "10.0.2.80", "port": 53, "count": 1 },
+    { "at": 5500, "action": "udp", "node": "h1", "dst": "10.0.2.80", "port": 7, "count": 1, "size": 3000 },
+    { "at": 7000, "action": "tcp", "node": "h1", "dst": "10.0.2.90", "bytes": 8000 }
+  ]
+}
