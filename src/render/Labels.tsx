@@ -61,9 +61,11 @@ function DeviceLabel({ node }: { node: NodeJson }) {
   return (
     <div ref={ref} className={`device-label ${node.type} ${selected ? 'selected' : ''}`} style={{ visibility: 'hidden' }}>
       <b>{node.name}</b>
-      {ipsOf(node).map((ip) => (
-        <span key={ip}>{ip}</span>
-      ))}
+      {/* Routers have one address per interface: list them once zoomed in, to keep the overview readable. */}
+      {(node.type !== 'router' || lod !== 'far') &&
+        ipsOf(node).map((ip) => (
+          <span key={ip}>{ip}</span>
+        ))}
       {lod === 'near' && node.type === 'host' && node.gateway && <span className="dim">gw {node.gateway}</span>}
     </div>
   );

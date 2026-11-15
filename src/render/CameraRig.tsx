@@ -27,7 +27,7 @@ function bounds(nodes: { position: { x: number; y: number } }[]) {
   if (box.isEmpty()) box.set(new THREE.Vector3(-5, 0, -5), new THREE.Vector3(5, 0, 5));
   const centre = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
-  return { centre, radius: Math.max(6, Math.hypot(size.x, size.z) / 2 + 3) };
+  return { centre, radius: Math.max(5, Math.hypot(size.x, size.z) / 2 + 2) };
 }
 
 export function CameraRig() {
@@ -48,7 +48,7 @@ export function CameraRig() {
       const fit = radius / Math.sin(fov / 2);
       return { dist: fit / Math.min(1, camera.aspect) ** 0.5, zoom: 1 };
     }
-    return { dist: 60, zoom: Math.min(size.width, size.height) / (radius * 2.3) };
+    return { dist: 60, zoom: Math.min(size.width, size.height) / (radius * 1.9) };
   };
 
   const flyTo = (target: THREE.Vector3, radius: number) => {

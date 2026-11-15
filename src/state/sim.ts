@@ -136,7 +136,10 @@ export class SimController {
   readonly packets = new Map<string, TxEvent>();
   /** Wall time (performance.now) of the last frame seen per link, for activity flashes. */
   readonly linkActivity = new Map<string, number>();
+  /** Recent drops for the renderer's burst effect (wall-clock time). */
+  readonly drops: { node: string; at: number; bystander: boolean }[] = [];
   private pending: TraceEvent[] = [];
+  private lastFlush = 0;
   private idleWall = 0;
   private unsubscribe: () => void = () => {};
 
@@ -152,6 +155,7 @@ export class SimController {
     this.inFlight.clear();
     this.packets.clear();
     this.linkActivity.clear();
+    this.drops.length = 0;
     this.pending = [];
     this.engine = engine;
     this.unsubscribe = this.engine.on((e) => this.onEvent(e));
@@ -179,6 +183,9 @@ export class SimController {
       this.inFlight.set(e.packetId!, e);
       this.packets.set(e.packetId!, e);
       if (this.packets.size > PACKET_INDEX_LIMIT) this.packets.delete(this.packets.keys().next().value!);
+    } else if (e.type === 'drop') {
+      this.drops.push({ node: e.node, at: performance.now(), bystander: e.reason === 'not-for-me' });
+      if (this.drops.length > 256) this.drops.splice(0, this.drops.length - 256);
     } else if (e.type === 'rx') {
       this.inFlight.delete(e.packetId!);
       this.linkActivity.set(e.link, performance.now());
@@ -191,6 +198,7 @@ export class SimController {
   }
 
   pause(): void {
+    this.flush();
     useSim.setState({ playing: false });
   }
 
@@ -221,10 +229,15 @@ export class SimController {
       this.idleWall = 0;
     }
     e.runUntil(Math.round(target));
-    this.flush();
+    this.flush(false);
   }
 
-  flush(): void {
+  /** Push batched events into the store. While playing this is throttled (~15 Hz) so React
+   * work stays small; the renderer reads in-flight frames directly every frame. */
+  flush(force = true): void {
+    const wall = performance.now();
+    if (!force && wall - this.lastFlush < 66) return;
+    this.lastFlush = wall;
     const evs = this.pending;
     const simTime = this.engine.now;
     if (!evs.length) {
@@ -232,7 +245,7 @@ export class SimController {
       return;
     }
     this.pending = [];
-    const now = performance.now();
+    const now = wall;
     useSim.setState((s) => {
       let log = s.log.concat(evs);
       if (log.length > LOG_LIMIT) log = log.slice(log.length - LOG_LIMIT);
